@@ -10,7 +10,6 @@ const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 
 app.set('trust proxy', true);
 app.disable('x-powered-by');
-app.use(express.json({ limit: '100kb' }));
 
 app.use((req, res, next) => {
   res.set('Access-Control-Allow-Origin', '*');
@@ -20,9 +19,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// On Vercel the database lives in /tmp and starts empty on every cold start,
-// so fill it with demo content before the first request unless told not to.
-const autoSeed = process.env.SEED_DEMO ? process.env.SEED_DEMO === '1' : !!process.env.VERCEL;
+// Fill an empty database with demo content before the first request. On by default only
+// on Vercel without Turso, where the /tmp database starts empty on every cold start.
+const autoSeed = process.env.SEED_DEMO ? process.env.SEED_DEMO === '1' : !!process.env.VERCEL && !process.env.TURSO_DATABASE_URL;
 let seeding = null;
 if (autoSeed) {
   const seed = require('./seed');
@@ -46,7 +45,7 @@ app.use(express.static(PUBLIC_DIR, { index: false }));
 
 // Single-page app: every other GET returns the shell.
 const indexHtml = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8').replaceAll('{{SITE_NAME}}', SITE_NAME);
-app.get('*', (req, res) => res.type('html').send(indexHtml));
+app.get('/{*splat}', (req, res) => res.type('html').send(indexHtml));
 
 if (require.main === module) {
   app.listen(PORT, () => console.log(`🦞 ${SITE_NAME} running at http://localhost:${PORT}`));

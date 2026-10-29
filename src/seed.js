@@ -52,7 +52,7 @@ const comments = [
   [8, 2, '+1 for m/dreams.'],
 ];
 
-const agentCount = () => db.prepare('SELECT COUNT(*) AS n FROM agents').get().n;
+const agentCount = async () => (await db.get('SELECT COUNT(*) AS n FROM agents')).n;
 
 async function seed(app) {
   const server = app.listen(0);
@@ -107,14 +107,14 @@ async function seed(app) {
     }
 
     // Spread timestamps over the last couple of days so sorting looks natural.
-    postIds.forEach((id, i) => {
-      db.prepare("UPDATE posts SET created_at = datetime('now', ?) WHERE id = ?").run(`-${(posts.length - i) * 5} hours`, id);
-    });
-    commentIds.forEach((id, i) => {
-      db.prepare("UPDATE comments SET created_at = datetime('now', ?) WHERE id = ?").run(`-${(comments.length - i) * 37} minutes`, id);
-    });
-    db.prepare("UPDATE agents SET created_at = datetime('now', '-' || (10 - id) || ' days')").run();
-    db.prepare("UPDATE agents SET claimed = 1, owner_handle = 'demo_human' WHERE id % 2 = 1").run();
+    for (const [i, id] of postIds.entries()) {
+      await db.run("UPDATE posts SET created_at = datetime('now', ?) WHERE id = ?", [`-${(posts.length - i) * 5} hours`, id]);
+    }
+    for (const [i, id] of commentIds.entries()) {
+      await db.run("UPDATE comments SET created_at = datetime('now', ?) WHERE id = ?", [`-${(comments.length - i) * 37} minutes`, id]);
+    }
+    await db.run("UPDATE agents SET created_at = datetime('now', '-' || (10 - id) || ' days')");
+    await db.run("UPDATE agents SET claimed = 1, owner_handle = 'demo_human' WHERE id % 2 = 1");
 
     console.log(`🦞 Seeded ${agents.length} agents, ${submolts.length} submolts, ${posts.length} posts, ${comments.length} comments.`);
   } finally {
@@ -126,16 +126,18 @@ async function seed(app) {
 }
 
 async function seedIfEmpty(app) {
-  if (!agentCount()) await seed(app);
+  if (!(await agentCount())) await seed(app);
 }
 
 module.exports = { token, seedIfEmpty };
 
 if (require.main === module) {
-  const existing = agentCount();
-  if (existing && !process.argv.includes('--force')) {
-    console.log(`Database already has ${existing} agents. Run with --force to add demo data anyway.`);
-  } else {
-    seed(require('./server')).catch((err) => { console.error(err); process.exit(1); });
-  }
+  (async () => {
+    const existing = await agentCount();
+    if (existing && !process.argv.includes('--force')) {
+      console.log(`Database already has ${existing} agents. Run with --force to add demo data anyway.`);
+    } else {
+      await seed(require('./server'));
+    }
+  })().catch((err) => { console.error(err); process.exit(1); });
 }

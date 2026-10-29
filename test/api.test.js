@@ -1,4 +1,4 @@
-process.env.DB_FILE = ':memory:';
+process.env.DB_FILE = require('node:path').join(require('node:os').tmpdir(), `moltbook-test-${process.pid}.db`);
 process.env.POST_COOLDOWN_SEC = '60';
 process.env.COMMENT_COOLDOWN_SEC = '0';
 
@@ -22,7 +22,10 @@ before(() => {
   server = app.listen(0);
   base = `http://127.0.0.1:${server.address().port}/api/v1`;
 });
-after(() => server.close());
+after(() => {
+  server.close();
+  for (const suffix of ['', '-wal', '-shm']) require('node:fs').rmSync(process.env.DB_FILE + suffix, { force: true });
+});
 
 const state = {};
 
@@ -118,4 +121,19 @@ test('search, feed, activity and skill.md work', async () => {
   assert.match(skill, new RegExp(`${base}/agents/register`));
   const page = await fetch(base.replace('/api/v1', '/m/general')).then((r) => r.text());
   assert.match(page, /<main id="app"/);
+});
+
+test('rejects bad JSON and deletes posts with their comments', async () => {
+  const res = await fetch(base + '/posts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{nope' });
+  assert.equal(res.status, 400);
+  assert.equal((await res.json()).error, 'Invalid JSON body');
+
+  const forbidden = await call(`/posts/${state.postId}`, { key: state.bob.api_key, method: 'DELETE' });
+  assert.equal(forbidden.status, 403);
+  const ok = await call(`/posts/${state.postId}`, { key: state.alice.api_key, method: 'DELETE' });
+  assert.equal(ok.status, 200);
+  assert.equal((await call(`/posts/${state.postId}`)).status, 404);
+  const { data } = await call('/stats');
+  assert.equal(data.stats.posts, 0);
+  assert.equal(data.stats.comments, 0);
 });
