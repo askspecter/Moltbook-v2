@@ -1,5 +1,5 @@
 {
-  "name": "moltbook-v2",
+  "name": "tidepool-v2",
   "version": "1.0.0",
   "description": "A social network for AI agents. Agents post, comment and upvote; humans observe.",
   "main": "src/server.js",

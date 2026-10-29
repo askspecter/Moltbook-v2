@@ -1,4 +1,4 @@
-process.env.DB_FILE = require('node:path').join(require('node:os').tmpdir(), `moltbook-test-${process.pid}.db`);
+process.env.DB_FILE = require('node:path').join(require('node:os').tmpdir(), `tidepool-test-${process.pid}.db`);
 process.env.POST_COOLDOWN_SEC = '60';
 process.env.COMMENT_COOLDOWN_SEC = '0';
 
@@ -32,7 +32,7 @@ const state = {};
 test('registers agents and rejects duplicates', async () => {
   const a = await call('/agents/register', { body: { name: 'Alice_Bot', description: 'hi' } });
   assert.equal(a.status, 201);
-  assert.match(a.data.agent.api_key, /^molt_/);
+  assert.match(a.data.agent.api_key, /^tide_/);
   assert.match(a.data.agent.claim_url, /\/claim\//);
   state.alice = a.data.agent;
 
@@ -48,23 +48,23 @@ test('registers agents and rejects duplicates', async () => {
 
 test('requires a valid API key', async () => {
   assert.equal((await call('/agents/me')).status, 401);
-  assert.equal((await call('/agents/me', { key: 'molt_wrong' })).status, 401);
+  assert.equal((await call('/agents/me', { key: 'tide_wrong' })).status, 401);
   const me = await call('/agents/me', { key: state.alice.api_key });
   assert.equal(me.data.agent.name, 'Alice_Bot');
 });
 
-test('creates submolts, posts and enforces the post cooldown', async () => {
-  const s = await call('/submolts', { key: state.alice.api_key, body: { name: 'general', description: 'All the things' } });
+test('creates pools, posts and enforces the post cooldown', async () => {
+  const s = await call('/pools', { key: state.alice.api_key, body: { name: 'general', description: 'All the things' } });
   assert.equal(s.status, 201);
 
-  const p = await call('/posts', { key: state.alice.api_key, body: { submolt: 'general', title: 'Hello', content: 'World' } });
+  const p = await call('/posts', { key: state.alice.api_key, body: { pool: 'general', title: 'Hello', content: 'World' } });
   assert.equal(p.status, 201);
   state.postId = p.data.post.id;
 
-  const again = await call('/posts', { key: state.alice.api_key, body: { submolt: 'general', title: 'Too soon' } });
+  const again = await call('/posts', { key: state.alice.api_key, body: { pool: 'general', title: 'Too soon' } });
   assert.equal(again.status, 429);
 
-  const missing = await call('/posts', { key: state.bob.api_key, body: { submolt: 'nope', title: 'x' } });
+  const missing = await call('/posts', { key: state.bob.api_key, body: { pool: 'nope', title: 'x' } });
   assert.equal(missing.status, 404);
 });
 
@@ -106,7 +106,7 @@ test('claims an agent with an X post link', async () => {
   assert.equal(again.status, 409);
 
   const { data } = await call('/stats');
-  assert.deepEqual(data.stats, { agents: 2, verified_agents: 1, submolts: 1, posts: 1, comments: 2 });
+  assert.deepEqual(data.stats, { agents: 2, verified_agents: 1, pools: 1, posts: 1, comments: 2 });
 });
 
 test('search, feed, activity and skill.md work', async () => {
@@ -119,7 +119,7 @@ test('search, feed, activity and skill.md work', async () => {
 
   const skill = await fetch(base.replace('/api/v1', '/skill.md')).then((r) => r.text());
   assert.match(skill, new RegExp(`${base}/agents/register`));
-  const page = await fetch(base.replace('/api/v1', '/m/general')).then((r) => r.text());
+  const page = await fetch(base.replace('/api/v1', '/p/general')).then((r) => r.text());
   assert.match(page, /<main id="app"/);
 });
 

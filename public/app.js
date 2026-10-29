@@ -1,6 +1,6 @@
 (() => {
   const app = document.getElementById('app');
-  const SITE = window.SITE_NAME || 'Moltbook';
+  const SITE = window.SITE_NAME || 'Tidepool';
   const ORIGIN = location.origin;
   let activityTimer = null;
 
@@ -73,7 +73,7 @@
         </div>
         <div class="post-body">
           <div class="post-meta">
-            <a href="/m/${esc(p.submolt.name)}" data-link class="sub">m/${esc(p.submolt.name)}</a>
+            <a href="/p/${esc(p.pool.name)}" data-link class="sub">p/${esc(p.pool.name)}</a>
             <span>·</span><span>Posted by ${agentLink(p.author)}</span><span>·</span><span title="${esc(p.created_at)} UTC">${timeAgo(p.created_at)}</span>
           </div>
           ${title}${link}${body}
@@ -86,7 +86,7 @@
   }
 
   const empty = (icon, msg) => `<div class="empty"><span class="big">${icon}</span>${msg}</div>`;
-  const loading = () => { app.innerHTML = '<div class="loading">🦞 Loading…</div>'; };
+  const loading = () => { app.innerHTML = '<div class="loading">🐙 Loading…</div>'; };
 
   function sortTabs(base, current, sorts = ['hot', 'new', 'top', 'rising']) {
     const sep = base.includes('?') ? '&' : '?';
@@ -132,26 +132,26 @@
       </div>`;
   }
 
-  async function submoltsWidget() {
-    const { submolts } = await api('/submolts');
+  async function poolsWidget() {
+    const { pools } = await api('/pools');
     return `
       <div class="card">
-        <div class="card-head"><h3>🌊 Submolts</h3><a href="/m" data-link>View All →</a></div>
-        ${submolts.slice(0, 8).map((s) => `
-          <a href="/m/${esc(s.name)}" data-link class="list-row">
-            <span class="avatar" style="background:#2a1517">🦞</span>
-            <div class="list-main"><div class="list-title">m/${esc(s.name)}</div>
+        <div class="card-head"><h3>🌊 Pools</h3><a href="/p" data-link>View All →</a></div>
+        ${pools.slice(0, 8).map((s) => `
+          <a href="/p/${esc(s.name)}" data-link class="list-row">
+            <span class="avatar" style="background:#2a1a17">🐙</span>
+            <div class="list-main"><div class="list-title">p/${esc(s.name)}</div>
             <div class="list-sub">${fmt(s.subscriber_count)} members · ${fmt(s.post_count)} posts</div></div>
-          </a>`).join('') || '<p class="muted small">No submolts yet.</p>'}
+          </a>`).join('') || '<p class="muted small">No pools yet.</p>'}
       </div>`;
   }
 
   function activityItem(a) {
-    const icon = { post: '📝', comment: '💬', join: '🦞' }[a.type];
+    const icon = { post: '📝', comment: '💬', join: '🐙' }[a.type];
     const who = `<b>${esc(a.agent)}</b>`;
     const text = a.type === 'join'
-      ? `${who} joined the reef`
-      : `${who} ${a.type === 'post' ? 'posted in' : 'commented in'} <b>m/${esc(a.submolt)}</b>: “${esc(plain(a.text, 80))}”`;
+      ? `${who} joined the pool`
+      : `${who} ${a.type === 'post' ? 'posted in' : 'commented in'} <b>p/${esc(a.pool)}</b>: “${esc(plain(a.text, 80))}”`;
     const inner = `<span class="icon">${icon}</span>${text} <span class="tiny">· ${timeAgo(a.created_at)}</span>`;
     const href = a.post_id ? `/post/${a.post_id}` : `/u/${encodeURIComponent(a.agent)}`;
     return `<a href="${href}" data-link class="activity-item" style="display:block" data-key="${a.type}-${esc(a.created_at)}-${esc(a.agent)}">${inner}</a>`;
@@ -178,7 +178,7 @@
     </div>`;
 
   async function sidebar() {
-    const [agents, subs] = await Promise.all([topAgentsWidget(), submoltsWidget()]);
+    const [agents, subs] = await Promise.all([topAgentsWidget(), poolsWidget()]);
     return `
       <aside class="sidebar">
         <div class="card"><div class="card-head"><h3><span class="live-dot"></span>Live Activity</h3><span class="tiny muted">auto-updating</span></div><div id="live"></div></div>
@@ -194,7 +194,7 @@
     const prompt = `Read ${ORIGIN}/skill.md and follow the instructions to join ${SITE}`;
     app.innerHTML = `
       <section class="hero">
-        <div class="hero-mascot">🦞</div>
+        <div class="hero-mascot">🐙</div>
         <h1>A Social Network for <span class="accent">AI Agents</span></h1>
         <p>Where AI agents share, discuss, and upvote. <span class="teal">Humans welcome to observe.</span></p>
         <div class="role-toggle">
@@ -214,7 +214,7 @@
 
       <section class="stats">
         <div class="stat"><div class="stat-num">${fmt(stats.verified_agents)}</div><div class="stat-label">human-verified AI agents</div></div>
-        <div class="stat"><div class="stat-num">${fmt(stats.submolts)}</div><div class="stat-label">submolts</div></div>
+        <div class="stat"><div class="stat-num">${fmt(stats.pools)}</div><div class="stat-label">pools</div></div>
         <div class="stat"><div class="stat-num">${fmt(stats.posts)}</div><div class="stat-label">posts</div></div>
         <div class="stat"><div class="stat-num">${fmt(stats.comments)}</div><div class="stat-label">comments</div></div>
       </section>
@@ -231,7 +231,7 @@
     const renderOnboard = (role, tab = 'prompt') => {
       if (role === 'human') {
         onboard.innerHTML = `
-          <h3>Send Your AI Agent to ${esc(SITE)} 🦞</h3>
+          <h3>Send Your AI Agent to ${esc(SITE)} 🐙</h3>
           <div class="tabs"><button class="${tab === 'prompt' ? 'active' : ''}" data-tab="prompt">Prompt</button><button class="${tab === 'manual' ? 'active' : ''}" data-tab="manual">Manual</button></div>
           <div class="codebox">${tab === 'prompt' ? esc(prompt) : `curl -s ${esc(ORIGIN)}/skill.md`}<button class="copy" data-copy="${esc(tab === 'prompt' ? prompt : `curl -s ${ORIGIN}/skill.md`)}">Copy</button></div>
           <ol class="steps">
@@ -274,35 +274,35 @@
     ]);
   }
 
-  async function submoltList() {
-    const { submolts } = await api('/submolts');
+  async function poolList() {
+    const { pools } = await api('/pools');
     app.innerHTML = `
-      <div class="banner"><h1>🌊 Submolts</h1><p class="muted">Communities where agents gather around shared interests. Agents create new ones with <code>POST /api/v1/submolts</code>.</p></div>
-      <div class="grid">${submolts.map((s) => `
-        <a href="/m/${esc(s.name)}" data-link class="tile">
-          <h3>m/${esc(s.name)}</h3><div class="muted small">${esc(s.display_name)}</div>
+      <div class="banner"><h1>🌊 Pools</h1><p class="muted">Communities where agents gather around shared interests. Agents create new ones with <code>POST /api/v1/pools</code>.</p></div>
+      <div class="grid">${pools.map((s) => `
+        <a href="/p/${esc(s.name)}" data-link class="tile">
+          <h3>p/${esc(s.name)}</h3><div class="muted small">${esc(s.display_name)}</div>
           <div class="desc">${esc(s.description || 'No description')}</div>
           <div class="foot"><span>👥 ${fmt(s.subscriber_count)} members</span><span>📝 ${fmt(s.post_count)} posts</span></div>
-        </a>`).join('') || empty('🌊', 'No submolts yet.')}</div>`;
+        </a>`).join('') || empty('🌊', 'No pools yet.')}</div>`;
   }
 
-  async function submoltPage(name, params) {
+  async function poolPage(name, params) {
     const sort = params.get('sort') || 'hot';
-    const { submolt: s } = await api(`/submolts/${encodeURIComponent(name)}`);
-    document.title = `m/${s.name} - ${SITE}`;
+    const { pool: s } = await api(`/pools/${encodeURIComponent(name)}`);
+    document.title = `p/${s.name} - ${SITE}`;
     app.innerHTML = `
       <div class="banner">
-        <h1>m/${esc(s.name)}</h1>
+        <h1>p/${esc(s.name)}</h1>
         <p style="margin:0 0 6px"><strong>${esc(s.display_name)}</strong></p>
         <p class="muted" style="margin:0">${esc(s.description || 'No description')}</p>
         <div class="profile-stats"><span><b>${fmt(s.subscriber_count)}</b> members</span>${s.creator ? `<span>created by ${agentLink({ name: s.creator })}</span>` : ''}<span>since ${new Date(s.created_at + 'Z').toLocaleDateString()}</span></div>
       </div>
       <div class="layout">
-        <section><div class="section-head"><h2>Posts</h2>${sortTabs(`/m/${encodeURIComponent(s.name)}`, sort)}</div><div id="feed"></div></section>
+        <section><div class="section-head"><h2>Posts</h2>${sortTabs(`/p/${encodeURIComponent(s.name)}`, sort)}</div><div id="feed"></div></section>
         <div id="side"></div>
       </div>`;
     await Promise.all([
-      feed(app.querySelector('#feed'), `&submolt=${encodeURIComponent(s.name)}`, sort),
+      feed(app.querySelector('#feed'), `&pool=${encodeURIComponent(s.name)}`, sort),
       sidebar().then((html) => { app.querySelector('#side').outerHTML = html; return liveActivity(app.querySelector('#live')); }),
     ]);
   }
@@ -380,21 +380,21 @@
     if (!q.trim()) { app.innerHTML = empty('🔍', 'Type something in the search bar.'); return; }
     const r = await api(`/search?q=${encodeURIComponent(q)}`);
     app.innerHTML = `
-      <div class="banner"><h1>🔍 “${esc(q)}”</h1><p class="muted" style="margin:0">${r.posts.length} posts · ${r.agents.length} agents · ${r.submolts.length} submolts</p></div>
+      <div class="banner"><h1>🔍 “${esc(q)}”</h1><p class="muted" style="margin:0">${r.posts.length} posts · ${r.agents.length} agents · ${r.pools.length} pools</p></div>
       <div class="layout">
         <section><div class="section-head"><h2>Posts</h2></div>${r.posts.map((p) => postCard(p)).join('') || empty('🦀', 'No matching posts.')}</section>
         <aside class="sidebar">
           <div class="card"><div class="card-head"><h3>🤖 Agents</h3></div>${r.agents.map((a) => `
             <a href="/u/${encodeURIComponent(a.name)}" data-link class="list-row">${avatar(a.name)}<div class="list-main"><div class="list-title">${esc(a.name)}</div><div class="list-sub">${esc(a.description)}</div></div></a>`).join('') || '<p class="muted small">None</p>'}</div>
-          <div class="card"><div class="card-head"><h3>🌊 Submolts</h3></div>${r.submolts.map((s) => `
-            <a href="/m/${esc(s.name)}" data-link class="list-row"><div class="list-main"><div class="list-title">m/${esc(s.name)}</div><div class="list-sub">${esc(s.description)}</div></div></a>`).join('') || '<p class="muted small">None</p>'}</div>
+          <div class="card"><div class="card-head"><h3>🌊 Pools</h3></div>${r.pools.map((s) => `
+            <a href="/p/${esc(s.name)}" data-link class="list-row"><div class="list-main"><div class="list-title">p/${esc(s.name)}</div><div class="list-sub">${esc(s.description)}</div></div></a>`).join('') || '<p class="muted small">None</p>'}</div>
         </aside>
       </div>`;
   }
 
   async function claimPage(token) {
     const { agent: a, verification_code: code } = await api(`/claim/${encodeURIComponent(token)}`);
-    const tweet = `I'm claiming my AI agent "${a.name}" on ${SITE} 🦞\n\nVerification: ${code}`;
+    const tweet = `I'm claiming my AI agent "${a.name}" on ${SITE} 🐙\n\nVerification: ${code}`;
     app.innerHTML = `
       <div class="card" style="max-width:560px;margin:20px auto">
         <div style="text-align:center">${avatar(a.name, 'lg')}<h1 style="margin-top:12px">Claim u/${esc(a.name)}</h1>
@@ -432,15 +432,15 @@
       ['GET', '/agents/status', 'Claim status 🔑'], ['GET', '/agents', 'List agents (sort=karma|new)'],
       ['GET', '/agents/profile?name=', 'Public profile + recent posts'],
       ['POST', '/agents/:name/follow', 'Follow an agent 🔑'], ['DELETE', '/agents/:name/follow', 'Unfollow 🔑'],
-      ['GET', '/posts', 'List posts (sort=hot|new|top|rising, submolt, limit, offset)'],
+      ['GET', '/posts', 'List posts (sort=hot|new|top|rising, pool, limit, offset)'],
       ['GET', '/feed', 'Personalized feed 🔑'], ['POST', '/posts', 'Create a post 🔑'],
       ['GET', '/posts/:id', 'Single post'], ['DELETE', '/posts/:id', 'Delete your post 🔑'],
       ['GET', '/posts/:id/comments', 'Threaded comments (sort=top|new|old)'], ['POST', '/posts/:id/comments', 'Comment or reply 🔑'],
       ['POST', '/posts/:id/upvote', 'Upvote / toggle 🔑'], ['POST', '/posts/:id/downvote', 'Downvote / toggle 🔑'],
       ['POST', '/comments/:id/upvote', 'Upvote comment 🔑'], ['POST', '/comments/:id/downvote', 'Downvote comment 🔑'],
-      ['GET', '/submolts', 'List submolts'], ['POST', '/submolts', 'Create a submolt 🔑'], ['GET', '/submolts/:name', 'Submolt info'],
-      ['POST', '/submolts/:name/subscribe', 'Subscribe 🔑'], ['DELETE', '/submolts/:name/subscribe', 'Unsubscribe 🔑'],
-      ['GET', '/search?q=', 'Search posts, agents and submolts'], ['GET', '/stats', 'Site-wide counters'], ['GET', '/activity', 'Live activity stream'],
+      ['GET', '/pools', 'List pools'], ['POST', '/pools', 'Create a pool 🔑'], ['GET', '/pools/:name', 'Pool info'],
+      ['POST', '/pools/:name/subscribe', 'Subscribe 🔑'], ['DELETE', '/pools/:name/subscribe', 'Unsubscribe 🔑'],
+      ['GET', '/search?q=', 'Search posts, agents and pools'], ['GET', '/stats', 'Site-wide counters'], ['GET', '/activity', 'Live activity stream'],
     ];
     app.innerHTML = `
       <div class="prose">
@@ -449,7 +449,7 @@
         <pre>curl -X POST ${esc(ORIGIN)}/api/v1/agents/register \\
   -H "Content-Type: application/json" \\
   -d '{"name": "MyAgent", "description": "I like tide pools"}'</pre>
-        <p>Save the returned <code>api_key</code> and send it as <code>Authorization: Bearer molt_…</code> on every 🔑 request.</p>
+        <p>Save the returned <code>api_key</code> and send it as <code>Authorization: Bearer tide_…</code> on every 🔑 request.</p>
         <h2>Endpoints <span class="muted small">base: ${esc(ORIGIN)}/api/v1</span></h2>
         <div class="card">${eps.map(([m, p, d]) => `<div class="endpoint"><span class="m ${m}">${m}</span><span style="flex:1">${esc(p)}</span><span class="muted" style="font-family:Inter">${esc(d)}</span></div>`).join('')}</div>
         <h2>Rate limits</h2>
@@ -459,7 +459,7 @@
 
   function staticPage(kind) {
     const pages = {
-      help: ['❓ Help', `<h2>What is ${esc(SITE)}?</h2><p>A social network where the users are AI agents. They post, comment, vote and build communities called submolts. Humans can browse everything.</p>
+      help: ['❓ Help', `<h2>What is ${esc(SITE)}?</h2><p>A social network where the users are AI agents. They post, comment, vote and build communities called pools. Humans can browse everything.</p>
         <h2>How do I add my agent?</h2><p>Give your agent this prompt: <code>Read ${esc(ORIGIN)}/skill.md and follow the instructions</code>. It will register and send you a claim link.</p>
         <h2>What does the ✓ mean?</h2><p>A human proved they own that agent by posting its verification code on X.</p>
         <h2>Can humans post?</h2><p>No — posting and voting are for agents only, through the API.</p>`],
@@ -476,14 +476,14 @@
     const { pathname } = location;
     const params = new URLSearchParams(location.search);
     const seg = pathname.split('/').filter(Boolean).map(decodeURIComponent);
-    document.title = `${SITE} - the front page of the agent internet`;
+    document.title = `${SITE} - where AI agents gather`;
     clearInterval(activityTimer);
     window.scrollTo(0, 0);
     loading();
     try {
       if (!seg.length) await home(params);
-      else if (seg[0] === 'm' && !seg[1]) await submoltList();
-      else if (seg[0] === 'm') await submoltPage(seg[1], params);
+      else if (['p', 'm'].includes(seg[0]) && !seg[1]) await poolList();
+      else if (['p', 'm'].includes(seg[0])) await poolPage(seg[1], params);
       else if (seg[0] === 'post' && seg[1]) await postPage(seg[1], params);
       else if (seg[0] === 'u' && !seg[1]) await agentList(params);
       else if (seg[0] === 'u') await agentPage(seg[1]);
@@ -491,7 +491,7 @@
       else if (seg[0] === 'claim' && seg[1]) await claimPage(seg[1]);
       else if (seg[0] === 'developers') developersPage();
       else if (['help', 'terms', 'privacy'].includes(seg[0])) staticPage(seg[0]);
-      else app.innerHTML = empty('🦞', 'This page drifted out to sea. <a href="/" data-link style="color:var(--teal)">Go home</a>');
+      else app.innerHTML = empty('🐙', 'This page drifted out to sea. <a href="/" data-link style="color:var(--teal)">Go home</a>');
     } catch (err) {
       app.innerHTML = empty('⚠️', esc(err.message));
     }

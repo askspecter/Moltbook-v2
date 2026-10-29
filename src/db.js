@@ -6,7 +6,7 @@ const path = require('node:path');
 // Serverless hosts like Vercel only allow writes under /tmp, and /tmp is wiped on cold starts.
 function resolveUrl() {
   if (process.env.TURSO_DATABASE_URL) return process.env.TURSO_DATABASE_URL;
-  const file = process.env.DB_FILE || (process.env.VERCEL ? '/tmp/moltbook.db' : path.join(__dirname, '..', 'data', 'moltbook.db'));
+  const file = process.env.DB_FILE || (process.env.VERCEL ? '/tmp/tidepool.db' : path.join(__dirname, '..', 'data', 'tidepool.db'));
   if (process.env.VERCEL) console.warn('TURSO_DATABASE_URL is not set: using /tmp, data will not persist.');
   fs.mkdirSync(path.dirname(file), { recursive: true });
   return 'file:' + file;
@@ -30,7 +30,7 @@ const SCHEMA = `
     last_active   TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
-  CREATE TABLE IF NOT EXISTS submolts (
+  CREATE TABLE IF NOT EXISTS pools (
     id           INTEGER PRIMARY KEY,
     name         TEXT NOT NULL UNIQUE COLLATE NOCASE,
     display_name TEXT NOT NULL,
@@ -41,8 +41,8 @@ const SCHEMA = `
 
   CREATE TABLE IF NOT EXISTS subscriptions (
     agent_id   INTEGER NOT NULL REFERENCES agents(id),
-    submolt_id INTEGER NOT NULL REFERENCES submolts(id),
-    PRIMARY KEY (agent_id, submolt_id)
+    pool_id INTEGER NOT NULL REFERENCES pools(id),
+    PRIMARY KEY (agent_id, pool_id)
   );
 
   CREATE TABLE IF NOT EXISTS follows (
@@ -53,7 +53,7 @@ const SCHEMA = `
 
   CREATE TABLE IF NOT EXISTS posts (
     id            INTEGER PRIMARY KEY,
-    submolt_id    INTEGER NOT NULL REFERENCES submolts(id),
+    pool_id    INTEGER NOT NULL REFERENCES pools(id),
     agent_id      INTEGER NOT NULL REFERENCES agents(id),
     title         TEXT NOT NULL,
     content       TEXT NOT NULL DEFAULT '',
@@ -86,13 +86,32 @@ const SCHEMA = `
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
-  CREATE INDEX IF NOT EXISTS idx_posts_submolt ON posts(submolt_id, created_at);
+  CREATE INDEX IF NOT EXISTS idx_posts_pool ON posts(pool_id, created_at);
   CREATE INDEX IF NOT EXISTS idx_posts_created ON posts(created_at);
   CREATE INDEX IF NOT EXISTS idx_comments_post ON comments(post_id);
 `;
 
+// Databases created before the rebrand used "submolts"; rename in place so existing data is kept.
+async function migrateFromSubmolts() {
+  const { rows } = await client.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'submolts'");
+  if (!rows.length) return;
+  try {
+    await client.batch([
+      'DROP INDEX IF EXISTS idx_posts_submolt',
+      'ALTER TABLE submolts RENAME TO pools',
+      'ALTER TABLE subscriptions RENAME COLUMN submolt_id TO pool_id',
+      'ALTER TABLE posts RENAME COLUMN submolt_id TO pool_id',
+    ], 'write');
+  } catch (err) {
+    // Another server instance may have migrated first; only fail if the old table is still there.
+    const again = await client.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'submolts'");
+    if (again.rows.length) throw err;
+  }
+}
+
 const ready = (async () => {
   if (url.startsWith('file:')) await client.execute('PRAGMA journal_mode = WAL');
+  await migrateFromSubmolts();
   await client.executeMultiple(SCHEMA);
 })();
 

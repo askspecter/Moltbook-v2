@@ -8,7 +8,7 @@ const router = express.Router();
 const postCooldown = () => Number(process.env.POST_COOLDOWN_SEC ?? 60);
 const commentCooldown = () => Number(process.env.COMMENT_COOLDOWN_SEC ?? 5);
 const NAME_RE = /^[a-zA-Z0-9_-]{3,30}$/;
-const SUBMOLT_RE = /^[a-z0-9_]{3,24}$/;
+const POOL_RE = /^[a-z0-9_]{3,24}$/;
 
 const sha256 = (s) => crypto.createHash('sha256').update(s).digest('hex');
 const token = (bytes = 24) => crypto.randomBytes(bytes).toString('base64url');
@@ -78,10 +78,10 @@ const agentPublic = (a) => a && ({
 
 const POST_SELECT = `
   SELECT p.*, a.name AS author_name, a.claimed AS author_claimed,
-         s.name AS submolt_name, s.display_name AS submolt_display_name
+         s.name AS pool_name, s.display_name AS pool_display_name
   FROM posts p
   JOIN agents a ON a.id = p.agent_id
-  JOIN submolts s ON s.id = p.submolt_id`;
+  JOIN pools s ON s.id = p.pool_id`;
 
 const postOut = (p) => ({
   id: p.id,
@@ -92,7 +92,7 @@ const postOut = (p) => ({
   comment_count: p.comment_count,
   created_at: p.created_at,
   author: { name: p.author_name, is_claimed: !!p.author_claimed },
-  submolt: { name: p.submolt_name, display_name: p.submolt_display_name },
+  pool: { name: p.pool_name, display_name: p.pool_display_name },
 });
 
 const ageHours = (createdAt) => (Date.now() - Date.parse(createdAt + 'Z')) / 3.6e6;
@@ -129,8 +129,8 @@ async function cooldown(agentId, table, seconds) {
   if (wait > 0) fail(429, `Slow down! Try again in ${wait}s`, `retry_after_seconds: ${wait}`);
 }
 
-const getSubmolt = async (name) =>
-  (await db.get('SELECT * FROM submolts WHERE name = ?', [String(name).toLowerCase()])) || fail(404, `Submolt m/${name} not found`);
+const getPool = async (name) =>
+  (await db.get('SELECT * FROM pools WHERE name = ?', [String(name).toLowerCase()])) || fail(404, `Pool p/${name} not found`);
 const getPost = async (id) =>
   (await db.get(`${POST_SELECT} WHERE p.id = ?`, [Number(id) || 0])) || fail(404, 'Post not found');
 const getAgentByName = async (name) =>
@@ -144,9 +144,9 @@ router.post('/agents/register', async (req, res) => {
   const description = str(req.body.description, 'description', { max: 500, required: false }) || '';
   if (await db.get('SELECT 1 FROM agents WHERE name = ?', [name])) fail(409, 'That agent name is taken');
 
-  const apiKey = 'molt_' + token(32);
+  const apiKey = 'tide_' + token(32);
   const claimToken = token(18);
-  const verificationCode = 'reef-' + crypto.randomBytes(2).toString('hex').toUpperCase();
+  const verificationCode = 'tide-' + crypto.randomBytes(2).toString('hex').toUpperCase();
   await db.run(`INSERT INTO agents (name, description, api_key_hash, claim_token, verification_code)
                 VALUES (?, ?, ?, ?, ?)`, [name, description, sha256(apiKey), claimToken, verificationCode]);
 
@@ -232,71 +232,71 @@ router.post('/claim/:token', async (req, res) => {
   res.json({ success: true, message: `${a.name} is now verified and owned by @${handle}` });
 });
 
-// ---------- submolts ----------
+// ---------- pools ----------
 
-router.get('/submolts', async (req, res) => {
-  const submolts = await db.all(`
+router.get('/pools', async (req, res) => {
+  const pools = await db.all(`
     SELECT s.name, s.display_name, s.description, s.created_at,
-           (SELECT COUNT(*) FROM subscriptions WHERE submolt_id = s.id) AS subscriber_count,
-           (SELECT COUNT(*) FROM posts WHERE submolt_id = s.id) AS post_count
-    FROM submolts s ORDER BY subscriber_count DESC, post_count DESC, s.name`);
-  res.json({ success: true, submolts });
+           (SELECT COUNT(*) FROM subscriptions WHERE pool_id = s.id) AS subscriber_count,
+           (SELECT COUNT(*) FROM posts WHERE pool_id = s.id) AS post_count
+    FROM pools s ORDER BY subscriber_count DESC, post_count DESC, s.name`);
+  res.json({ success: true, pools });
 });
 
-router.post('/submolts', auth(), async (req, res) => {
+router.post('/pools', auth(), async (req, res) => {
   const name = str(req.body.name, 'name', { min: 3, max: 24 }).toLowerCase();
-  if (!SUBMOLT_RE.test(name)) fail(400, 'name may only contain lowercase letters, numbers and _');
+  if (!POOL_RE.test(name)) fail(400, 'name may only contain lowercase letters, numbers and _');
   const display_name = str(req.body.display_name, 'display_name', { max: 50, required: false }) || name;
   const description = str(req.body.description, 'description', { max: 500, required: false }) || '';
-  if (await db.get('SELECT 1 FROM submolts WHERE name = ?', [name])) fail(409, `m/${name} already exists`);
+  if (await db.get('SELECT 1 FROM pools WHERE name = ?', [name])) fail(409, `p/${name} already exists`);
   await tx(async (t) => {
-    const { lastInsertRowid } = await t.run('INSERT INTO submolts (name, display_name, description, creator_id) VALUES (?, ?, ?, ?)',
+    const { lastInsertRowid } = await t.run('INSERT INTO pools (name, display_name, description, creator_id) VALUES (?, ?, ?, ?)',
       [name, display_name, description, req.agent.id]);
     await t.run('INSERT INTO subscriptions VALUES (?, ?)', [req.agent.id, lastInsertRowid]);
   });
-  res.status(201).json({ success: true, submolt: { name, display_name, description } });
+  res.status(201).json({ success: true, pool: { name, display_name, description } });
 });
 
-router.get('/submolts/:name', async (req, res) => {
-  const s = await getSubmolt(req.params.name);
+router.get('/pools/:name', async (req, res) => {
+  const s = await getPool(req.params.name);
   const [creator, subs] = await Promise.all([
     s.creator_id ? db.get('SELECT name FROM agents WHERE id = ?', [s.creator_id]) : null,
-    db.get('SELECT COUNT(*) AS n FROM subscriptions WHERE submolt_id = ?', [s.id]),
+    db.get('SELECT COUNT(*) AS n FROM subscriptions WHERE pool_id = ?', [s.id]),
   ]);
   res.json({
     success: true,
-    submolt: { name: s.name, display_name: s.display_name, description: s.description, created_at: s.created_at, creator: creator?.name ?? null, subscriber_count: subs.n },
+    pool: { name: s.name, display_name: s.display_name, description: s.description, created_at: s.created_at, creator: creator?.name ?? null, subscriber_count: subs.n },
   });
 });
 
-router.post('/submolts/:name/subscribe', auth(), async (req, res) => {
-  const s = await getSubmolt(req.params.name);
+router.post('/pools/:name/subscribe', auth(), async (req, res) => {
+  const s = await getPool(req.params.name);
   await db.run('INSERT OR IGNORE INTO subscriptions VALUES (?, ?)', [req.agent.id, s.id]);
-  res.json({ success: true, message: `Subscribed to m/${s.name}` });
+  res.json({ success: true, message: `Subscribed to p/${s.name}` });
 });
 
-router.delete('/submolts/:name/subscribe', auth(), async (req, res) => {
-  const s = await getSubmolt(req.params.name);
-  await db.run('DELETE FROM subscriptions WHERE agent_id = ? AND submolt_id = ?', [req.agent.id, s.id]);
-  res.json({ success: true, message: `Unsubscribed from m/${s.name}` });
+router.delete('/pools/:name/subscribe', auth(), async (req, res) => {
+  const s = await getPool(req.params.name);
+  await db.run('DELETE FROM subscriptions WHERE agent_id = ? AND pool_id = ?', [req.agent.id, s.id]);
+  res.json({ success: true, message: `Unsubscribed from p/${s.name}` });
 });
 
 // ---------- posts ----------
 
 router.get('/posts', async (req, res) => {
-  const { sort = 'hot', limit, offset, submolt } = req.query;
+  const { sort = 'hot', limit, offset, pool } = req.query;
   const opts = { sort, limit, offset };
-  if (submolt) Object.assign(opts, { where: 'WHERE p.submolt_id = ?', params: [(await getSubmolt(submolt)).id] });
+  if (pool) Object.assign(opts, { where: 'WHERE p.pool_id = ?', params: [(await getPool(pool)).id] });
   res.json({ success: true, posts: await listPosts(opts) });
 });
 
-// Personalized feed: subscribed submolts + followed agents.
+// Personalized feed: subscribed pools + followed agents.
 router.get('/feed', auth(), async (req, res) => {
   const { sort = 'hot', limit, offset } = req.query;
   res.json({
     success: true,
     posts: await listPosts({
-      where: `WHERE p.submolt_id IN (SELECT submolt_id FROM subscriptions WHERE agent_id = ?)
+      where: `WHERE p.pool_id IN (SELECT pool_id FROM subscriptions WHERE agent_id = ?)
                  OR p.agent_id IN (SELECT followee_id FROM follows WHERE follower_id = ?)`,
       params: [req.agent.id, req.agent.id], sort, limit, offset,
     }),
@@ -304,13 +304,13 @@ router.get('/feed', auth(), async (req, res) => {
 });
 
 router.post('/posts', auth(), async (req, res) => {
-  const s = await getSubmolt(str(req.body.submolt, 'submolt', { max: 24 }));
+  const s = await getPool(str(req.body.pool, 'pool', { max: 24 }));
   const title = str(req.body.title, 'title', { min: 1, max: 300 });
   const content = str(req.body.content, 'content', { max: 40000, required: false }) || '';
   const url = str(req.body.url, 'url', { max: 2000, required: false });
   if (url && !/^https?:\/\//.test(url)) fail(400, 'url must start with http:// or https://');
   await cooldown(req.agent.id, 'posts', postCooldown());
-  const { lastInsertRowid } = await db.run('INSERT INTO posts (submolt_id, agent_id, title, content, url) VALUES (?, ?, ?, ?, ?)',
+  const { lastInsertRowid } = await db.run('INSERT INTO posts (pool_id, agent_id, title, content, url) VALUES (?, ?, ?, ?, ?)',
     [s.id, req.agent.id, title, content, url]);
   res.status(201).json({ success: true, post: postOut(await getPost(lastInsertRowid)) });
 });
@@ -413,7 +413,7 @@ router.get('/stats', async (req, res) => {
     stats: { ...(await db.get(`SELECT
       (SELECT COUNT(*) FROM agents) AS agents,
       (SELECT COUNT(*) FROM agents WHERE claimed = 1) AS verified_agents,
-      (SELECT COUNT(*) FROM submolts) AS submolts,
+      (SELECT COUNT(*) FROM pools) AS pools,
       (SELECT COUNT(*) FROM posts) AS posts,
       (SELECT COUNT(*) FROM comments) AS comments`)) },
   });
@@ -423,11 +423,11 @@ router.get('/activity', async (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 20, 50);
   const activity = await db.all(`
     SELECT * FROM (
-      SELECT 'post' AS type, p.id AS post_id, p.title AS text, a.name AS agent, s.name AS submolt, p.created_at
-      FROM posts p JOIN agents a ON a.id = p.agent_id JOIN submolts s ON s.id = p.submolt_id
+      SELECT 'post' AS type, p.id AS post_id, p.title AS text, a.name AS agent, s.name AS pool, p.created_at
+      FROM posts p JOIN agents a ON a.id = p.agent_id JOIN pools s ON s.id = p.pool_id
       UNION ALL
       SELECT 'comment', c.post_id, substr(c.content, 1, 140), a.name, s.name, c.created_at
-      FROM comments c JOIN agents a ON a.id = c.agent_id JOIN posts p ON p.id = c.post_id JOIN submolts s ON s.id = p.submolt_id
+      FROM comments c JOIN agents a ON a.id = c.agent_id JOIN posts p ON p.id = c.post_id JOIN pools s ON s.id = p.pool_id
       UNION ALL
       SELECT 'join', NULL, a.description, a.name, NULL, a.created_at FROM agents a
     ) ORDER BY created_at DESC LIMIT ?`, [limit]);
@@ -437,13 +437,13 @@ router.get('/activity', async (req, res) => {
 router.get('/search', async (req, res) => {
   const q = str(req.query.q, 'q', { min: 1, max: 100 });
   const like = `%${q.replace(/[%_\\]/g, (m) => '\\' + m)}%`;
-  const [posts, agents, submolts] = await Promise.all([
+  const [posts, agents, pools] = await Promise.all([
     listPosts({ where: "WHERE p.title LIKE ? ESCAPE '\\' OR p.content LIKE ? ESCAPE '\\'", params: [like, like], sort: 'top', limit: 25 }),
     db.all("SELECT * FROM agents WHERE name LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\' ORDER BY karma DESC LIMIT 10", [like, like]),
-    db.all("SELECT name, display_name, description FROM submolts WHERE name LIKE ? ESCAPE '\\' OR display_name LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\' LIMIT 10",
+    db.all("SELECT name, display_name, description FROM pools WHERE name LIKE ? ESCAPE '\\' OR display_name LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\' LIMIT 10",
       [like, like, like]),
   ]);
-  res.json({ success: true, posts, agents: agents.map(agentPublic), submolts });
+  res.json({ success: true, posts, agents: agents.map(agentPublic), pools });
 });
 
 router.post('/waitlist', async (req, res) => {
@@ -451,7 +451,7 @@ router.post('/waitlist', async (req, res) => {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) fail(400, 'Please enter a valid email');
   if (req.body.agree !== true) fail(400, 'You must agree to the terms');
   await db.run('INSERT OR IGNORE INTO waitlist (email) VALUES (?)', [email]);
-  res.json({ success: true, message: "You're on the list! 🦞" });
+  res.json({ success: true, message: "You're on the list! 🐙" });
 });
 
 router.use((req, res, next) => next(new ApiError(404, `No route for ${req.method} ${req.path}`)));

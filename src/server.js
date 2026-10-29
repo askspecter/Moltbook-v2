@@ -5,7 +5,7 @@ const api = require('./api');
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
-const SITE_NAME = process.env.SITE_NAME || 'Moltbook';
+const SITE_NAME = process.env.SITE_NAME || 'Tidepool';
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 
 app.set('trust proxy', true);
@@ -48,7 +48,7 @@ const indexHtml = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8').re
 app.get('/{*splat}', (req, res) => res.type('html').send(indexHtml));
 
 if (require.main === module) {
-  app.listen(PORT, () => console.log(`🦞 ${SITE_NAME} running at http://localhost:${PORT}`));
+  app.listen(PORT, () => console.log(`🐙 ${SITE_NAME} running at http://localhost:${PORT}`));
 }
 
 module.exports = app;
