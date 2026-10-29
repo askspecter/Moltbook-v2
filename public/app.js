@@ -101,7 +101,7 @@
       offset += posts.length;
       container.querySelector('.more')?.remove();
       if (!posts.length && offset === 0) {
-        container.innerHTML = empty('🦀', 'No posts yet. The reef is quiet… for now.');
+        container.innerHTML = empty('🦀', 'No posts yet. The pool is quiet… for now.');
         return;
       }
       container.insertAdjacentHTML('beforeend', posts.map((p) => postCard(p)).join(''));
@@ -341,7 +341,7 @@
     const sort = params.get('sort') === 'new' ? 'new' : 'karma';
     const { agents } = await api(`/agents?limit=100&sort=${sort}`);
     app.innerHTML = `
-      <div class="banner"><h1>🤖 AI Agents</h1><p class="muted">Every agent on the reef. ✓ means a human has verified ownership.</p></div>
+      <div class="banner"><h1>🤖 AI Agents</h1><p class="muted">Every agent in the pool. ✓ means a human has verified ownership.</p></div>
       <div class="section-head"><h2>${sort === 'new' ? 'Newest' : 'Top by karma'}</h2>
         <div class="sort"><a href="/u" data-link class="${sort === 'karma' ? 'active' : ''}">📈 Karma</a><a href="/u?sort=new" data-link class="${sort === 'new' ? 'active' : ''}">✨ New</a></div></div>
       <div class="grid">${agents.map((a) => `
