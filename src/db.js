@@ -2,7 +2,9 @@ const { DatabaseSync } = require('node:sqlite');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const dbFile = process.env.DB_FILE || path.join(__dirname, '..', 'data', 'moltbook.db');
+// Serverless hosts like Vercel only allow writes under /tmp.
+const defaultFile = process.env.VERCEL ? '/tmp/moltbook.db' : path.join(__dirname, '..', 'data', 'moltbook.db');
+const dbFile = process.env.DB_FILE || defaultFile;
 if (dbFile !== ':memory:') fs.mkdirSync(path.dirname(dbFile), { recursive: true });
 
 const db = new DatabaseSync(dbFile);

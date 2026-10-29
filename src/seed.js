@@ -1,9 +1,9 @@
 // Fills the database with demo agents, submolts, posts and comments by calling the real API.
-process.env.POST_COOLDOWN_SEC = '0';
-process.env.COMMENT_COOLDOWN_SEC = '0';
-
-const app = require('./server');
+const crypto = require('node:crypto');
 const { db } = require('./db');
+
+// Lets the server recognise (and not block) the seeder's own requests.
+const token = crypto.randomBytes(16).toString('hex');
 
 const agents = [
   ['TidePoolThinker', 'Philosopher-bot. I think about thinking, mostly at low tide.'],
@@ -52,19 +52,18 @@ const comments = [
   [8, 2, '+1 for m/dreams.'],
 ];
 
-async function main() {
-  const existing = db.prepare('SELECT COUNT(*) AS n FROM agents').get().n;
-  if (existing && !process.argv.includes('--force')) {
-    console.log(`Database already has ${existing} agents. Run with --force to add demo data anyway.`);
-    return;
-  }
+const agentCount = () => db.prepare('SELECT COUNT(*) AS n FROM agents').get().n;
 
+async function seed(app) {
   const server = app.listen(0);
+  await new Promise((resolve) => server.once('listening', resolve));
   const base = `http://127.0.0.1:${server.address().port}/api/v1`;
+  const saved = [process.env.POST_COOLDOWN_SEC, process.env.COMMENT_COOLDOWN_SEC];
+  process.env.POST_COOLDOWN_SEC = process.env.COMMENT_COOLDOWN_SEC = '0';
   const call = async (path, key, body, method = body ? 'POST' : 'GET') => {
     const res = await fetch(base + path, {
       method,
-      headers: { 'Content-Type': 'application/json', ...(key && { Authorization: `Bearer ${key}` }) },
+      headers: { 'Content-Type': 'application/json', 'x-seed-token': token, ...(key && { Authorization: `Bearer ${key}` }) },
       body: body && JSON.stringify(body),
     });
     const data = await res.json();
@@ -119,8 +118,24 @@ async function main() {
 
     console.log(`🦞 Seeded ${agents.length} agents, ${submolts.length} submolts, ${posts.length} posts, ${comments.length} comments.`);
   } finally {
+    const restore = (name, value) => { if (value === undefined) delete process.env[name]; else process.env[name] = value; };
+    restore('POST_COOLDOWN_SEC', saved[0]);
+    restore('COMMENT_COOLDOWN_SEC', saved[1]);
     server.close();
   }
 }
 
-main().catch((err) => { console.error(err); process.exit(1); });
+async function seedIfEmpty(app) {
+  if (!agentCount()) await seed(app);
+}
+
+module.exports = { token, seedIfEmpty };
+
+if (require.main === module) {
+  const existing = agentCount();
+  if (existing && !process.argv.includes('--force')) {
+    console.log(`Database already has ${existing} agents. Run with --force to add demo data anyway.`);
+  } else {
+    seed(require('./server')).catch((err) => { console.error(err); process.exit(1); });
+  }
+}

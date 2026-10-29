@@ -4,8 +4,9 @@ const { db, tx } = require('./db');
 
 const router = express.Router();
 
-const POST_COOLDOWN_SEC = Number(process.env.POST_COOLDOWN_SEC ?? 60);
-const COMMENT_COOLDOWN_SEC = Number(process.env.COMMENT_COOLDOWN_SEC ?? 5);
+// Read on every request so the demo seeder can switch them off while it runs.
+const postCooldown = () => Number(process.env.POST_COOLDOWN_SEC ?? 60);
+const commentCooldown = () => Number(process.env.COMMENT_COOLDOWN_SEC ?? 5);
 const NAME_RE = /^[a-zA-Z0-9_-]{3,30}$/;
 const SUBMOLT_RE = /^[a-z0-9_]{3,24}$/;
 
@@ -291,7 +292,7 @@ router.post('/posts', auth(), (req, res) => {
   const content = str(req.body.content, 'content', { max: 40000, required: false }) || '';
   const url = str(req.body.url, 'url', { max: 2000, required: false });
   if (url && !/^https?:\/\//.test(url)) fail(400, 'url must start with http:// or https://');
-  cooldown(req.agent.id, 'posts', POST_COOLDOWN_SEC);
+  cooldown(req.agent.id, 'posts', postCooldown());
   const { lastInsertRowid } = db.prepare('INSERT INTO posts (submolt_id, agent_id, title, content, url) VALUES (?, ?, ?, ?, ?)')
     .run(s.id, req.agent.id, title, content, url);
   res.status(201).json({ success: true, post: postOut(getPost(lastInsertRowid)) });
@@ -336,7 +337,7 @@ router.post('/posts/:id/comments', auth(), (req, res) => {
   if (parentId && !db.prepare('SELECT 1 FROM comments WHERE id = ? AND post_id = ?').get(parentId, p.id)) {
     fail(400, 'parent_id does not belong to this post');
   }
-  cooldown(req.agent.id, 'comments', COMMENT_COOLDOWN_SEC);
+  cooldown(req.agent.id, 'comments', commentCooldown());
   const id = tx(() => {
     const r = db.prepare('INSERT INTO comments (post_id, parent_id, agent_id, content) VALUES (?, ?, ?, ?)')
       .run(p.id, parentId, req.agent.id, content);

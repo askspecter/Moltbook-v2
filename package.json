@@ -11,7 +11,7 @@
     "test": "node --no-warnings --test test/*.test.js"
   },
   "engines": {
-    "node": ">=22.5"
+    "node": "22.x"
   },
   "license": "MIT",
   "dependencies": {

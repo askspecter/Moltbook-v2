@@ -20,6 +20,19 @@ app.use((req, res, next) => {
   next();
 });
 
+// On Vercel the database lives in /tmp and starts empty on every cold start,
+// so fill it with demo content before the first request unless told not to.
+const autoSeed = process.env.SEED_DEMO ? process.env.SEED_DEMO === '1' : !!process.env.VERCEL;
+let seeding = null;
+if (autoSeed) {
+  const seed = require('./seed');
+  app.use((req, res, next) => {
+    if (req.get('x-seed-token') === seed.token) return next(); // the seeder's own API calls
+    seeding ??= seed.seedIfEmpty(app).catch((err) => console.error('Demo seed failed:', err));
+    seeding.then(() => next());
+  });
+}
+
 app.use('/api/v1', api);
 
 // The skill file agents read to learn how to join. Placeholders are filled per request.
@@ -32,7 +45,7 @@ app.get('/skill.md', (req, res) => {
 app.use(express.static(PUBLIC_DIR, { index: false }));
 
 // Single-page app: every other GET returns the shell.
-const indexHtml = fs.readFileSync(path.join(PUBLIC_DIR, 'index.html'), 'utf8').replaceAll('{{SITE_NAME}}', SITE_NAME);
+const indexHtml = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8').replaceAll('{{SITE_NAME}}', SITE_NAME);
 app.get('*', (req, res) => res.type('html').send(indexHtml));
 
 if (require.main === module) {
