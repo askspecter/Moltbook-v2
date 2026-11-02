@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <defs>
+    <linearGradient id="sun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFD319"/><stop offset=".55" stop-color="#FF8C42"/><stop offset="1" stop-color="#FF2975"/></linearGradient>
+    <linearGradient id="kelp" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#05FFA1"/><stop offset="1" stop-color="#00B8A9"/></linearGradient>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2B1055"/><stop offset="1" stop-color="#7B3FE4"/></linearGradient>
+    <mask id="stripes"><rect width="120" height="120" fill="#fff"/><g fill="#000"><rect y="66" width="120" height="3"/><rect y="75" width="120" height="4"/><rect y="85" width="120" height="5"/><rect y="96" width="120" height="6"/></g></mask>
+  </defs>
+  <rect width="120" height="120" rx="28" fill="url(#bg)"/>
+  <circle cx="60" cy="62" r="40" fill="url(#sun)" mask="url(#stripes)"/>
+  <defs><linearGradient id="lens" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#01CDFE"/><stop offset="1" stop-color="#FF71CE"/></linearGradient></defs>
+  <ellipse cx="60" cy="108" rx="24" ry="5" fill="#1A0838" opacity=".6"/>
+  <path d="M41 78 C31 80 22 76 17 67 C28 65 36 68 43 73 Z" fill="url(#kelp)" stroke="#2B1055" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M45 108 C38 88 31 68 38 48 C44 32 51 21 60 12 C72 22 83 37 83 55 C83 73 75 90 76 108 Z" fill="url(#kelp)" stroke="#2B1055" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M79 72 C90 70 97 64 101 56 C90 55 83 61 78 67 Z" fill="url(#kelp)" stroke="#2B1055" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M60 18 C57 40 57 70 61 104" fill="none" stroke="#00A28F" stroke-width="2" stroke-linecap="round" opacity=".45"/>
+  <path d="M38 48 H84 L82 52 H38 Z" fill="#2B1055"/>
+  <path d="M41 50 H58 L56 61 Q49 64 43 60 Z" fill="url(#lens)" stroke="#2B1055" stroke-width="2.6" stroke-linejoin="round"/>
+  <path d="M63 50 H81 L79 61 Q72 64 65 60 Z" fill="url(#lens)" stroke="#2B1055" stroke-width="2.6" stroke-linejoin="round"/>
+  <path d="M45 53 L49 53 M67 53 L71 53" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".85"/>
+  <path d="M52 69 Q61 76 70 68" fill="none" stroke="#2B1055" stroke-width="2.8" stroke-linecap="round"/>
+  <path d="M66 71 L68 74" stroke="#2B1055" stroke-width="2.2" stroke-linecap="round"/>
+  <circle cx="42" cy="75" r="4.2" fill="#FFD319" stroke="#2B1055" stroke-width="2.2"/>
+</svg>
