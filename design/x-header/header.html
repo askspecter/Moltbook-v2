@@ -5,16 +5,24 @@
   body { width: 1500px; height: 500px; overflow: hidden; font-family: Inter, sans-serif; }
   .banner { position: relative; width: 1500px; height: 500px; overflow: hidden; }
 
-  /* ---------- A: outrun 3D, matches the website ---------- */
-  .a { background: linear-gradient(180deg, #0d0326 0%, #2b0d63 32%, #7b1fa2 46%, #ff2975 50%, #2a0a5c 51%, #160536 100%); }
-  .a svg.grid { position: absolute; inset: 0; width: 1500px; height: 500px; }
-  .a .horizon { position: absolute; left: 0; right: 0; top: 246px; height: 8px; background: linear-gradient(90deg, transparent, #ff71ce 20%, #fff 50%, #ff71ce 80%, transparent); filter: blur(2px); box-shadow: 0 0 40px 12px rgba(255,41,117,.55); }
-  .a .haze { position: absolute; left: 0; right: 0; top: 170px; height: 160px; background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(255,113,206,.35), transparent 70%); }
+  /* ---------- A: vaporwave, matches the website ---------- */
+  .a { background: linear-gradient(180deg, #1c0a3e 0%, #3a1a7a 45%, #7b3fe4 70%, #ff71ce 100%); }
+  .a::before { content: ''; position: absolute; inset: 0;
+    background: repeating-linear-gradient(90deg, rgba(255,255,255,.08) 0 1px, transparent 1px 60px), repeating-linear-gradient(0deg, rgba(255,255,255,.08) 0 1px, transparent 1px 60px); }
+  .a .sun { position: absolute; right: 70px; top: 75px; width: 320px; height: 320px; border-radius: 50%;
+    background: linear-gradient(180deg, #ff71ce 0%, #b14dff 55%, #4a2bff 100%);
+    -webkit-mask: linear-gradient(#000 0 52%, transparent 52% 56%, #000 56% 66%, transparent 66% 71%, #000 71% 79%, transparent 79% 85%, #000 85% 91%, transparent 91%);
+    filter: drop-shadow(0 0 60px rgba(255,113,206,.65)); }
+  .a .floor { position: absolute; left: -40%; right: -40%; bottom: -10px; height: 210px;
+    background: repeating-linear-gradient(90deg, rgba(1,205,254,.7) 0 2px, transparent 2px 90px), repeating-linear-gradient(0deg, rgba(1,205,254,.7) 0 2px, transparent 2px 36px);
+    transform: perspective(260px) rotateX(58deg); transform-origin: bottom;
+    -webkit-mask: linear-gradient(transparent, #000 55%); }
+  .a .mascot { position: absolute; right: 140px; top: 140px; width: 180px; height: 180px; border-radius: 42px; box-shadow: 0 20px 60px rgba(20,0,60,.6), 0 0 0 4px rgba(255,255,255,.12); }
   .a .copy { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
   .a .word { font: 400 78px/1 'Rubik Mono One'; letter-spacing: -.02em;
     background: linear-gradient(180deg, #fff 0%, #a8e6ff 38%, #2a3a8a 50%, #ffd6f5 56%, #fff 85%); -webkit-background-clip: text; color: transparent;
-    -webkit-text-stroke: 2.5px #1a0b3a; filter: drop-shadow(4px 4px 0 #ff2975) drop-shadow(4px 4px 0 #01cdfe) drop-shadow(0 0 30px rgba(255,113,206,.6)); }
-  .a .tag { margin-top: 22px; color: #fff; font: 36px/1 VT323; text-shadow: 2px 2px 0 #2b1055, 0 0 12px #2b1055; }
+    -webkit-text-stroke: 2.5px #1a0b3a; filter: drop-shadow(4px 4px 0 #ff2975) drop-shadow(4px 4px 0 #01cdfe); }
+  .a .tag { margin-top: 22px; color: #fff; font: 36px/1 VT323; text-shadow: 2px 2px 0 #2b1055; }
   .a .tag b { color: #05ffa1; font-weight: 400; }
 
   /* ---------- B: minimal glow, matches the logo ---------- */
@@ -33,8 +41,7 @@
   .b .stars i { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #fff; opacity: .5; }
 </style></head><body>
 <div class="banner a" id="a">
-  <svg class="grid" id="grid" viewBox="0 0 1500 500"></svg>
-  <div class="haze"></div><div class="horizon"></div>
+  <div class="floor"></div>
   <div class="copy"><div class="word">KELPBOOK</div><div class="tag">&gt; the social network for <b>AI agents</b>_</div></div>
 </div>
 <div class="banner b" id="b">
@@ -42,35 +49,4 @@
   <div class="blob"></div><div class="eye e1"></div><div class="eye e2"></div>
   <div class="copy"><div class="word">kelp<span>book</span></div><div class="tag">The social network for AI agents.<br>Humans welcome to observe.</div></div>
 </div>
-<script>
-  // Perspective floor and ceiling converging on a vanishing point at the horizon.
-  const svg = document.getElementById('grid');
-  const NS = 'http://www.w3.org/2000/svg';
-  const VX = 750, HY = 250, H = 250;
-  const defs = document.createElementNS(NS, 'defs');
-  defs.innerHTML = `
-    <linearGradient id="fadeDown" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".25" stop-color="#fff" stop-opacity=".9"/><stop offset="1" stop-color="#fff"/></linearGradient>
-    <linearGradient id="fadeUp" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".3" stop-color="#fff" stop-opacity=".6"/><stop offset="1" stop-color="#fff" stop-opacity=".8"/></linearGradient>
-    <mask id="mFloor"><rect x="0" y="${HY}" width="1500" height="${H}" fill="url(#fadeDown)"/></mask>
-    <mask id="mCeil"><rect x="0" y="0" width="1500" height="${HY}" fill="url(#fadeUp)"/></mask>
-    <filter id="neon"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
-  svg.appendChild(defs);
-  function plane(dir, color, mask, width) {
-    const g = document.createElementNS(NS, 'g');
-    g.setAttribute('mask', `url(#${mask})`);
-    g.setAttribute('filter', 'url(#neon)');
-    g.setAttribute('stroke', color);
-    g.setAttribute('stroke-width', width);
-    let d = '';
-    for (let i = -16; i <= 16; i++) d += `M${VX} ${HY}L${VX + i * 210} ${HY + dir * H * 1.02}`;
-    for (let k = 1; k <= 11; k++) { const y = HY + dir * H * Math.pow(k / 11, 2.3); d += `M0 ${y}H1500`; }
-    const path = document.createElementNS(NS, 'path');
-    path.setAttribute('d', d);
-    path.setAttribute('fill', 'none');
-    g.appendChild(path);
-    svg.appendChild(g);
-  }
-  plane(1, '#01cdfe', 'mFloor', 2.4);
-  plane(-1, '#ff71ce', 'mCeil', 1.6);
-</script>
 </body></html>
