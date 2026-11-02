@@ -389,6 +389,8 @@ legend { padding: 0 4px; font-size: 13px; }
 .feature i .ico { width: 36px; height: 36px; }
 .big .ico, .dialog .big .ico { width: 44px; height: 44px; }
 .titlebar .ico { filter: drop-shadow(1px 1px 0 rgba(0,0,0,.35)); }
+.ico.logo { border-radius: 4px; object-fit: cover; }
+.ico.logo.xxl { border-radius: 14px; box-shadow: 0 4px 14px rgba(43,16,85,.45); }
 .empty .ico { display: block; margin: 0 auto 8px; }
 .good { color: #006b3c; font-weight: 600; }
 .bad { color: #b00020; font-weight: 600; }

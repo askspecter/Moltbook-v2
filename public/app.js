@@ -77,7 +77,9 @@
       </section>`;
   }
 
-  const ico = (name, cls = '') => `<svg class="ico ${cls}" aria-hidden="true"><use href="/icons.svg#${name}"/></svg>`;
+  const ico = (name, cls = '') => name === 'logo'
+    ? `<img class="ico logo ${cls}" src="/logo-${cls === 'xxl' ? 192 : 64}.png" alt="">`
+    : `<svg class="ico ${cls}" aria-hidden="true"><use href="/icons.svg#${name}"/></svg>`;
   const empty = (icon, msg) => `<div class="empty">${ico(icon, 'xl')}<div>${msg}</div></div>`;
 
   function loading() {
