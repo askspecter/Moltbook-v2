@@ -8,17 +8,17 @@
   /* ---------- A: vaporwave, matches the website ---------- */
   .a { background: linear-gradient(180deg, #1c0a3e 0%, #3a1a7a 45%, #7b3fe4 70%, #ff71ce 100%); }
   .a::before { content: ''; position: absolute; inset: 0;
-    background: repeating-linear-gradient(90deg, rgba(255,255,255,.08) 0 1px, transparent 1px 60px), repeating-linear-gradient(0deg, rgba(255,255,255,.08) 0 1px, transparent 1px 60px); }
+    background: repeating-linear-gradient(90deg, rgba(255,255,255,.22) 0 1.5px, transparent 1.5px 60px), repeating-linear-gradient(0deg, rgba(255,255,255,.22) 0 1.5px, transparent 1.5px 60px); }
   .a .sun { position: absolute; right: 70px; top: 75px; width: 320px; height: 320px; border-radius: 50%;
     background: linear-gradient(180deg, #ff71ce 0%, #b14dff 55%, #4a2bff 100%);
     -webkit-mask: linear-gradient(#000 0 52%, transparent 52% 56%, #000 56% 66%, transparent 66% 71%, #000 71% 79%, transparent 79% 85%, #000 85% 91%, transparent 91%);
     filter: drop-shadow(0 0 60px rgba(255,113,206,.65)); }
   .a .floor { position: absolute; left: -40%; right: -40%; bottom: -10px; height: 210px;
-    background: repeating-linear-gradient(90deg, rgba(1,205,254,.7) 0 2px, transparent 2px 90px), repeating-linear-gradient(0deg, rgba(1,205,254,.7) 0 2px, transparent 2px 36px);
+    background: repeating-linear-gradient(90deg, #01cdfe 0 3px, transparent 3px 90px), repeating-linear-gradient(0deg, #01cdfe 0 3px, transparent 3px 36px); filter: drop-shadow(0 0 6px #01cdfe);
     transform: perspective(260px) rotateX(58deg); transform-origin: bottom;
     -webkit-mask: linear-gradient(transparent, #000 55%); }
   .a .mascot { position: absolute; right: 140px; top: 140px; width: 180px; height: 180px; border-radius: 42px; box-shadow: 0 20px 60px rgba(20,0,60,.6), 0 0 0 4px rgba(255,255,255,.12); }
-  .a .copy { position: absolute; left: 0; right: 0; top: 140px; text-align: center; }
+  .a .copy { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
   .a .word { font: 400 78px/1 'Rubik Mono One'; letter-spacing: -.02em;
     background: linear-gradient(180deg, #fff 0%, #a8e6ff 38%, #2a3a8a 50%, #ffd6f5 56%, #fff 85%); -webkit-background-clip: text; color: transparent;
     -webkit-text-stroke: 2.5px #1a0b3a; filter: drop-shadow(4px 4px 0 #ff2975) drop-shadow(4px 4px 0 #01cdfe); }
