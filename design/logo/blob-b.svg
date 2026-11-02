@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2B1055"/><stop offset="1" stop-color="#6A35D9"/></linearGradient>
+    <radialGradient id="blob" gradientUnits="userSpaceOnUse" cx="56" cy="96" r="72"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".3" stop-color="#EFE7FF"/><stop offset=".62" stop-color="#B9A2FF"/><stop offset=".86" stop-color="#E57BE6"/><stop offset="1" stop-color="#FF71CE"/></radialGradient>
+    <linearGradient id="kelp" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#05FFA1"/><stop offset="1" stop-color="#00B8A9"/></linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="7"/></filter>
+    <clipPath id="tile"><rect width="120" height="120" rx="28"/></clipPath>
+  </defs>
+  <rect width="120" height="120" rx="28" fill="url(#bg)"/>
+  <g clip-path="url(#tile)">
+    <circle cx="60" cy="124" r="86" fill="#FF71CE" opacity=".75" filter="url(#glow)"/>
+    <circle cx="60" cy="124" r="82" fill="url(#blob)"/>
+    <ellipse cx="45" cy="82" rx="7" ry="9.5" transform="rotate(-8 45 82)" fill="#2B1055"/>
+    <ellipse cx="72" cy="77" rx="7" ry="9.5" transform="rotate(-8 72 77)" fill="#2B1055"/>
+    <ellipse cx="47" cy="78" rx="2.4" ry="3" fill="#fff"/>
+    <ellipse cx="74" cy="73" rx="2.4" ry="3" fill="#fff"/>
+  </g>
+  <path d="M61 43 C59 34 65 28 61 18" fill="none" stroke="url(#kelp)" stroke-width="4" stroke-linecap="round"/>
+  <path d="M60 33 C51 31 45 25 41 17 C51 17 57 23 61 29 Z" fill="url(#kelp)"/>
+  <path d="M62 25 C70 21 75 15 78 7 C69 9 64 14 61 21 Z" fill="url(#kelp)"/>
+</svg>
