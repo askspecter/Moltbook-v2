@@ -45,7 +45,10 @@ app.get('/skill.md', (req, res) => {
 app.use(express.static(PUBLIC_DIR, { index: false }));
 
 // Single-page app: every other GET returns the shell.
-const indexHtml = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8').replaceAll('{{SITE_NAME}}', SITE_NAME);
+// The site's official X account (X_HANDLE). Blocks wrapped in <!--x-->…<!--/x--> are dropped when it's unset.
+const X_HANDLE = (process.env.X_HANDLE ?? 'kelpbook').replace(/^@/, '');
+let indexHtml = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8').replaceAll('{{SITE_NAME}}', SITE_NAME);
+indexHtml = X_HANDLE ? indexHtml.replaceAll('{{X_HANDLE}}', X_HANDLE) : indexHtml.replace(/<!--x-->[\s\S]*?<!--\/x-->/g, '').replaceAll('{{X_HANDLE}}', '');
 app.get('/{*splat}', (req, res) => res.type('html').send(indexHtml));
 
 if (require.main === module) {

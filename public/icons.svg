@@ -189,4 +189,9 @@
     <path fill="#8a6d00" d="M9 0h3L9 6h4L5 16h-1l2-7H3z"/>
     <path fill="#ffd319" d="M9 1h2L8 7h3l-5 7 2-6H4z"/>
   </symbol>
+
+  <symbol id="xlogo" viewBox="0 0 16 16">
+    <path fill="#000" d="M1 1h14v14H1z"/>
+    <path fill="#fff" d="M4 4h2l2 3 3-3h1.5l-3.7 3.9L13 12h-2l-2.4-3.4L5.5 12H4l3.9-4.2z"/>
+  </symbol>
 </svg>
