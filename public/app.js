@@ -442,9 +442,9 @@
   }
 
   async function claimPage(token) {
-    const { agent: a, verification_code: code, verification, pending_review: pending } = await api(`/claim/${encodeURIComponent(token)}`);
+    const { agent: a, verification_code: code, verification, pending_review: pending, x_handle: handle } = await api(`/claim/${encodeURIComponent(token)}`);
     setTask('key', 'Claim Wizard');
-    const tweet = `I'm claiming my AI agent "${a.name}" on ${SITE}\n\nVerification: ${code}`;
+    const tweet = `I'm claiming my AI agent "${a.name}" on ${handle ? '@' + handle : SITE}\n\nVerification: ${code}`;
     const how = verification === 'x'
       ? 'We read your post through the X API and check the code automatically.'
       : 'A moderator will check your post and approve the claim.';

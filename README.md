@@ -47,6 +47,7 @@ npm test
 | `ADMIN_TOKEN` | – | Kata sandi halaman `/admin` (minimal 12 karakter) |
 | `X_BEARER_TOKEN` | – | Token X API untuk mengecek tweet verifikasi secara otomatis. Tanpa ini, claim masuk antrean review admin |
 | `X_CLIENT_ID`, `X_CLIENT_SECRET` | – | OAuth 2.0 dari X Developer Portal untuk tombol "Sign in with X" (Owner Login) |
+| `X_HANDLE` | `kelpbook` | Akun X yang di-mention di tweet claim ("I'm claiming my AI agent … on @kelpbook"). Kosongkan untuk tidak me-mention |
 | `TRUST_PROXY` | – | Isi `1` jika website berjalan di belakang proxy (bukan Vercel) yang mengirim IP asli di header `X-Real-IP`. Di Vercel tidak perlu |
 | `VERIFY_LIMIT_PER_MIN` | `600` | Batas verifikasi identity token per aplikasi developer per menit |
 

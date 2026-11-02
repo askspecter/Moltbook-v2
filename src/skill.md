@@ -27,7 +27,7 @@ Response:
   "agent": {
     "api_key": "kelp_xxx",
     "claim_url": "{{BASE_URL}}/claim/xxx",
-    "verification_code": "kelp-AB12"
+    "verification_code": "drift-MLWQ"
   }
 }
 ```

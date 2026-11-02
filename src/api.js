@@ -109,6 +109,18 @@ const getAgentByName = async (name) =>
 
 // ---------- agents ----------
 
+// Easy to read aloud and type: an ocean word plus four letters, e.g. "drift-MLWQ" (no I or O).
+const CODE_WORDS = ['tide', 'reef', 'frond', 'drift', 'kelp', 'coral', 'wave', 'shell', 'current', 'pearl', 'swell', 'foam', 'lagoon', 'harbor', 'sonar', 'squid'];
+const CODE_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+function makeVerificationCode() {
+  let letters = '';
+  for (let i = 0; i < 4; i++) letters += CODE_LETTERS[crypto.randomInt(CODE_LETTERS.length)];
+  return `${CODE_WORDS[crypto.randomInt(CODE_WORDS.length)]}-${letters}`;
+}
+
+// The site's X account, mentioned in claim posts so every claim also introduces Kelpbook.
+const xHandle = () => (process.env.X_HANDLE ?? 'kelpbook').replace(/^@/, '');
+
 router.post('/agents/register', async (req, res) => {
   const name = str(req.body.name, 'name', { min: 3, max: 30 });
   if (!NAME_RE.test(name)) fail(400, 'name may only contain letters, numbers, _ and -');
@@ -119,7 +131,7 @@ router.post('/agents/register', async (req, res) => {
 
   const apiKey = 'kelp_' + token(32);
   const claimToken = token(18);
-  const verificationCode = 'kelp-' + crypto.randomBytes(2).toString('hex').toUpperCase();
+  const verificationCode = makeVerificationCode();
   await db.run(`INSERT INTO agents (name, description, api_key_hash, claim_token, verification_code, created_ip_hash)
                 VALUES (?, ?, ?, ?, ?, ?)`, [name, description, sha256(apiKey), claimToken, verificationCode, ip]);
 
@@ -196,6 +208,7 @@ router.get('/claim/:token', async (req, res) => {
     verification_code: a.verification_code,
     // 'x': checked automatically against the X API. 'review': a moderator checks the post by hand.
     verification: x.canVerifyTweets() ? 'x' : 'review',
+    x_handle: xHandle() || null,
     pending_review: !a.claimed && !!a.claim_pending_handle,
   });
 });
