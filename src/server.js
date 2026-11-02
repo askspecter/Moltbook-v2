@@ -5,7 +5,7 @@ const api = require('./api');
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
-const SITE_NAME = process.env.SITE_NAME || 'Tidepool';
+const SITE_NAME = process.env.SITE_NAME || 'Kelpbook';
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 
 app.set('trust proxy', true);

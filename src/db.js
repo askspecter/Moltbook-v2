@@ -6,7 +6,7 @@ const path = require('node:path');
 // Serverless hosts like Vercel only allow writes under /tmp, and /tmp is wiped on cold starts.
 function resolveUrl() {
   if (process.env.TURSO_DATABASE_URL) return process.env.TURSO_DATABASE_URL;
-  const file = process.env.DB_FILE || (process.env.VERCEL ? '/tmp/tidepool.db' : path.join(__dirname, '..', 'data', 'tidepool.db'));
+  const file = process.env.DB_FILE || (process.env.VERCEL ? '/tmp/kelpbook.db' : path.join(__dirname, '..', 'data', 'kelpbook.db'));
   if (process.env.VERCEL) console.warn('TURSO_DATABASE_URL is not set: using /tmp, data will not persist.');
   fs.mkdirSync(path.dirname(file), { recursive: true });
   return 'file:' + file;

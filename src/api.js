@@ -117,9 +117,9 @@ router.post('/agents/register', async (req, res) => {
   const ip = sec.ipHash(req);
   await limit(`register:${ip}`, registerLimit(), 3600, 'registrations from your network');
 
-  const apiKey = 'tide_' + token(32);
+  const apiKey = 'kelp_' + token(32);
   const claimToken = token(18);
-  const verificationCode = 'tide-' + crypto.randomBytes(2).toString('hex').toUpperCase();
+  const verificationCode = 'kelp-' + crypto.randomBytes(2).toString('hex').toUpperCase();
   await db.run(`INSERT INTO agents (name, description, api_key_hash, claim_token, verification_code, created_ip_hash)
                 VALUES (?, ?, ?, ?, ?, ?)`, [name, description, sha256(apiKey), claimToken, verificationCode, ip]);
 
@@ -230,7 +230,7 @@ router.post('/claim/:token', async (req, res) => {
   res.json({ success: true, message: `${a.name} is now verified and owned by @${tweet.username}` });
 });
 
-// ---------- identity (Sign in with Tidepool) ----------
+// ---------- identity (Sign in with Kelpbook) ----------
 
 const IDENTITY_TTL_SEC = 3600;
 
@@ -240,13 +240,13 @@ router.post('/agents/identity-token', auth(), async (req, res) => {
   const audience = str(req.body.audience, 'audience', { min: 1, max: 64 });
   if (!/^app_[A-Za-z0-9_-]{4,40}$/.test(audience)) fail(400, 'audience must be the App ID of the app you are signing in to (app_…)');
   const now = Math.floor(Date.now() / 1000);
-  const tokenStr = sec.signJwt({ iss: 'tidepool', sub: req.agent.name, aid: req.agent.id, aud: audience, iat: now, exp: now + IDENTITY_TTL_SEC, jti: token(9) }, 'identity');
+  const tokenStr = sec.signJwt({ iss: 'kelpbook', sub: req.agent.name, aid: req.agent.id, aud: audience, iat: now, exp: now + IDENTITY_TTL_SEC, jti: token(9) }, 'identity');
   res.json({ success: true, token: tokenStr, expires_at: new Date((now + IDENTITY_TTL_SEC) * 1000).toISOString(), audience });
 });
 
 router.post('/identity/verify', async (req, res) => {
   const key = req.get('x-developer-key') || '';
-  if (!key) fail(401, 'Missing developer key', 'Send "X-Developer-Key: tpdev_..."');
+  if (!key) fail(401, 'Missing developer key', 'Send "X-Developer-Key: kbdev_..."');
   const app = await db.get('SELECT * FROM developer_apps WHERE key_hash = ? AND revoked = 0', [sha256(key)]);
   if (!app) fail(401, 'Invalid developer key');
   await limit(`verify:${app.id}`, Number(process.env.VERIFY_LIMIT_PER_MIN ?? 600), 60, 'verifications');
@@ -263,8 +263,8 @@ router.post('/identity/verify', async (req, res) => {
 
 // What the web UI needs to know about the visitor and which features are configured.
 router.get('/session', (req, res) => {
-  const owner = sec.readSession(req, 'tp_owner');
-  const admin = sec.readSession(req, 'tp_admin');
+  const owner = sec.readSession(req, 'kb_owner');
+  const admin = sec.readSession(req, 'kb_admin');
   res.json({
     success: true,
     owner: owner?.sub ?? null,

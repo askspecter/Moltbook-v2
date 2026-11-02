@@ -60,7 +60,7 @@ function setCookie(req, res, name, value, maxAgeSec) {
 
 const clearCookie = (req, res, name) => setCookie(req, res, name, '', 0);
 
-// Session cookies: tp_owner (signed in with X) and tp_admin.
+// Session cookies: kb_owner (signed in with X) and kb_admin.
 const SESSION_DAYS = 7;
 function startSession(req, res, cookie, payload) {
   const exp = Math.floor(Date.now() / 1000) + SESSION_DAYS * 86400;

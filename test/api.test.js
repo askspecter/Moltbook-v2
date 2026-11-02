@@ -1,4 +1,4 @@
-process.env.DB_FILE = require('node:path').join(require('node:os').tmpdir(), `tidepool-test-${process.pid}.db`);
+process.env.DB_FILE = require('node:path').join(require('node:os').tmpdir(), `kelpbook-test-${process.pid}.db`);
 process.env.POST_COOLDOWN_SEC = '60';
 process.env.COMMENT_COOLDOWN_SEC = '0';
 process.env.REGISTER_LIMIT_PER_HOUR = '4';
@@ -22,7 +22,7 @@ async function call(path, { key, body, method, cookie, csrf = true, headers = {}
       'Content-Type': 'application/json',
       ...(key && { Authorization: `Bearer ${key}` }),
       ...(cookie && { Cookie: cookie }),
-      ...(csrf && { 'X-Tidepool-CSRF': '1' }),
+      ...(csrf && { 'X-Kelpbook-CSRF': '1' }),
       ...headers,
     },
     body: body && JSON.stringify(body),
@@ -31,7 +31,7 @@ async function call(path, { key, body, method, cookie, csrf = true, headers = {}
 }
 
 const ownerCookie = (handle) =>
-  `tp_owner=${sec.signJwt({ sub: handle, exp: Math.floor(Date.now() / 1000) + 600 }, 'session:tp_owner')}`;
+  `kb_owner=${sec.signJwt({ sub: handle, exp: Math.floor(Date.now() / 1000) + 600 }, 'session:kb_owner')}`;
 
 before(() => {
   server = app.listen(0);
@@ -47,7 +47,7 @@ const state = {};
 test('registers agents and rejects duplicates', async () => {
   const a = await call('/agents/register', { body: { name: 'Alice_Bot', description: 'hi' } });
   assert.equal(a.status, 201);
-  assert.match(a.data.agent.api_key, /^tide_/);
+  assert.match(a.data.agent.api_key, /^kelp_/);
   assert.match(a.data.agent.claim_url, /\/claim\//);
   state.alice = a.data.agent;
 
@@ -63,7 +63,7 @@ test('registers agents and rejects duplicates', async () => {
 
 test('requires a valid API key', async () => {
   assert.equal((await call('/agents/me')).status, 401);
-  assert.equal((await call('/agents/me', { key: 'tide_wrong' })).status, 401);
+  assert.equal((await call('/agents/me', { key: 'kelp_wrong' })).status, 401);
   const me = await call('/agents/me', { key: state.alice.api_key });
   assert.equal(me.data.agent.name, 'Alice_Bot');
 });
@@ -125,7 +125,7 @@ test('without an X token, claims wait for a moderator', async () => {
   assert.equal((await call('/admin/login', { body: { token: 'wrong-token-here' } })).status, 401);
   const login = await call('/admin/login', { body: { token: process.env.ADMIN_TOKEN } });
   assert.equal(login.status, 200);
-  state.admin = login.cookies.find((c) => c.startsWith('tp_admin=')).split(';')[0];
+  state.admin = login.cookies.find((c) => c.startsWith('kb_admin=')).split(';')[0];
   assert.equal((await call('/admin/claims', { cookie: state.admin, csrf: false })).data.claims[0].handle, 'bobowner');
   assert.equal((await call('/admin/claims/BobBot/approve', { cookie: state.admin, body: {}, csrf: false })).status, 403);
   const approved = await call('/admin/claims/BobBot/approve', { cookie: state.admin, body: {} });
@@ -194,7 +194,7 @@ test('owners manage their agents and developers verify agent identities', async 
   assert.equal(ok.data.valid, true);
   assert.equal(ok.data.agent.name, 'Alice_Bot');
   assert.equal(ok.data.agent.owner, 'AliceHuman');
-  assert.equal((await verify(minted.data.token, 'tpdev_wrong')).status, 401);
+  assert.equal((await verify(minted.data.token, 'kbdev_wrong')).status, 401);
   assert.equal((await verify(minted.data.token.slice(0, -2) + 'xx')).data.valid, false);
   assert.equal((await call('/agents/identity-token', { key: state.alice.api_key, body: {} })).status, 400);
   const otherApp = await call('/agents/identity-token', { key: state.alice.api_key, body: { audience: 'app_someoneelse' } });

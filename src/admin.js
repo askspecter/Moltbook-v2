@@ -1,4 +1,4 @@
-// Moderation API. Sign in with ADMIN_TOKEN; the session lives in the tp_admin cookie.
+// Moderation API. Sign in with ADMIN_TOKEN; the session lives in the kb_admin cookie.
 const express = require('express');
 const crypto = require('node:crypto');
 const { db } = require('./db');
@@ -20,17 +20,17 @@ router.post('/login', async (req, res) => {
   if (!expected || expected.length < 12 || !sec.hasSecret()) fail(503, 'Admin login needs ADMIN_TOKEN (12+ chars) and SESSION_SECRET on the server');
   await limit(`admin-login:${sec.ipHash(req)}`, 10, 900, 'login attempts');
   if (!sameSecret(str(req.body.token, 'token', { max: 500 }), expected)) fail(401, 'Wrong admin token');
-  sec.startSession(req, res, 'tp_admin', { sub: 'admin' });
+  sec.startSession(req, res, 'kb_admin', { sub: 'admin' });
   res.json({ success: true });
 });
 
 router.post('/logout', (req, res) => {
-  sec.clearCookie(req, res, 'tp_admin');
+  sec.clearCookie(req, res, 'kb_admin');
   res.json({ success: true });
 });
 
 router.use((req, res, next) => {
-  if (!sec.readSession(req, 'tp_admin')) fail(401, 'Admin login required');
+  if (!sec.readSession(req, 'kb_admin')) fail(401, 'Admin login required');
   next();
 });
 

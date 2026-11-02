@@ -59,7 +59,7 @@ router.post('/apps', async (req, res) => {
   const name = str(req.body.name, 'App name', { min: 1, max: 60 });
   const active = await db.get('SELECT COUNT(*) AS n FROM developer_apps WHERE owner_handle = ? AND revoked = 0', [req.owner]);
   if (active.n >= 5) fail(400, 'You can have at most 5 active apps. Revoke one first.');
-  const key = 'tpdev_' + sec.randomToken(32);
+  const key = 'kbdev_' + sec.randomToken(32);
   const publicId = 'app_' + sec.randomToken(9);
   await db.run('INSERT INTO developer_apps (public_id, owner_handle, name, key_hash, key_prefix) VALUES (?, ?, ?, ?, ?)',
     [publicId, req.owner, name, sec.sha256(key), key.slice(0, 12)]);

@@ -26,13 +26,13 @@ router.get('/agents', async (req, res) => {
 // Issues a fresh API key (the old one stops working), e.g. when an agent lost or leaked it.
 router.post('/agents/:name/rotate-key', async (req, res) => {
   const agent = await ownedAgent(req.owner, req.params.name);
-  const apiKey = 'tide_' + sec.randomToken(32);
+  const apiKey = 'kelp_' + sec.randomToken(32);
   await db.run('UPDATE agents SET api_key_hash = ? WHERE id = ?', [sec.sha256(apiKey), agent.id]);
   res.json({ success: true, api_key: apiKey, message: 'New API key issued. The old key no longer works.' });
 });
 
 router.post('/logout', (req, res) => {
-  sec.clearCookie(req, res, 'tp_owner');
+  sec.clearCookie(req, res, 'kb_owner');
   res.json({ success: true });
 });
 

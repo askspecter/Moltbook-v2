@@ -1,4 +1,4 @@
-// Owner login with X (OAuth 2.0 + PKCE). Sets the tp_owner session cookie.
+// Owner login with X (OAuth 2.0 + PKCE). Sets the kb_owner session cookie.
 const express = require('express');
 const x = require('./x');
 const sec = require('./security');
@@ -16,18 +16,18 @@ router.get('/x/login', (req, res) => {
   const { verifier, challenge } = x.pkce();
   const state = sec.randomToken(16);
   const exp = Math.floor(Date.now() / 1000) + 600;
-  sec.setCookie(req, res, 'tp_oauth', sec.signJwt({ state, verifier, next, exp }, 'oauth'), 600);
+  sec.setCookie(req, res, 'kb_oauth', sec.signJwt({ state, verifier, next, exp }, 'oauth'), 600);
   res.redirect(x.authorizeUrl({ redirectUri: redirectUri(req), state, challenge }));
 });
 
 router.get('/x/callback', async (req, res) => {
-  const saved = sec.verifyJwt(sec.parseCookies(req).tp_oauth, 'oauth');
-  sec.clearCookie(req, res, 'tp_oauth');
+  const saved = sec.verifyJwt(sec.parseCookies(req).kb_oauth, 'oauth');
+  sec.clearCookie(req, res, 'kb_oauth');
   if (!saved || !req.query.state || req.query.state !== saved.state) return back(res, '/owner', 'Login expired, please try again.');
   if (req.query.error || !req.query.code) return back(res, saved.next, 'Login was cancelled.');
   try {
     const username = await x.usernameFromCode({ code: String(req.query.code), redirectUri: redirectUri(req), verifier: saved.verifier });
-    sec.startSession(req, res, 'tp_owner', { sub: username });
+    sec.startSession(req, res, 'kb_owner', { sub: username });
     back(res, saved.next);
   } catch (err) {
     console.error('X login failed:', err);
@@ -36,7 +36,7 @@ router.get('/x/callback', async (req, res) => {
 });
 
 router.post('/logout', (req, res) => {
-  sec.clearCookie(req, res, 'tp_owner');
+  sec.clearCookie(req, res, 'kb_owner');
   res.json({ success: true });
 });
 

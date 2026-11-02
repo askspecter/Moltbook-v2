@@ -43,14 +43,14 @@ async function limit(bucket, max, windowSec, what = 'requests') {
 
 // Cookie-authenticated writes must carry this header; a cross-site form or image can't add it.
 function csrf(req, res, next) {
-  if (req.method !== 'GET' && req.method !== 'HEAD' && req.get('x-tidepool-csrf') !== '1') {
-    return next(new ApiError(403, 'Missing X-Tidepool-CSRF header'));
+  if (req.method !== 'GET' && req.method !== 'HEAD' && req.get('x-kelpbook-csrf') !== '1') {
+    return next(new ApiError(403, 'Missing X-Kelpbook-CSRF header'));
   }
   next();
 }
 
 function requireOwner(req, res, next) {
-  const session = sec.readSession(req, 'tp_owner');
+  const session = sec.readSession(req, 'kb_owner');
   if (!session) return next(new ApiError(401, 'Please sign in with X first'));
   req.owner = session.sub;
   next();
