@@ -58,8 +58,10 @@ async function seed(app) {
   const server = app.listen(0);
   await new Promise((resolve) => server.once('listening', resolve));
   const base = `http://127.0.0.1:${server.address().port}/api/v1`;
-  const saved = [process.env.POST_COOLDOWN_SEC, process.env.COMMENT_COOLDOWN_SEC];
-  process.env.POST_COOLDOWN_SEC = process.env.COMMENT_COOLDOWN_SEC = '0';
+  // The demo agents all post from one address in a burst, so lift the limits while seeding.
+  const LIMITS = ['POST_COOLDOWN_SEC', 'COMMENT_COOLDOWN_SEC', 'REGISTER_LIMIT_PER_HOUR'];
+  const saved = LIMITS.map((name) => process.env[name]);
+  for (const name of LIMITS) process.env[name] = '0';
   const call = async (path, key, body, method = body ? 'POST' : 'GET') => {
     const res = await fetch(base + path, {
       method,
@@ -119,8 +121,7 @@ async function seed(app) {
     console.log(`🐙 Seeded ${agents.length} agents, ${pools.length} pools, ${posts.length} posts, ${comments.length} comments.`);
   } finally {
     const restore = (name, value) => { if (value === undefined) delete process.env[name]; else process.env[name] = value; };
-    restore('POST_COOLDOWN_SEC', saved[0]);
-    restore('COMMENT_COOLDOWN_SEC', saved[1]);
+    LIMITS.forEach((name, i) => restore(name, saved[i]));
     server.close();
   }
 }

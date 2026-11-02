@@ -379,6 +379,34 @@ legend { padding: 0 4px; font-size: 13px; }
 .muted { color: var(--muted); }
 .small { font-size: 12px; }
 
+/* ---------- forms ---------- */
+
+.form { display: grid; gap: 12px; }
+.form fieldset { margin: 0; display: grid; gap: 10px; }
+.form label:not(.check) { display: block; font-size: 13px; font-weight: 600; }
+.form label .field, .form label .small { display: block; margin-top: 4px; }
+.form label .small { font-weight: 400; }
+.req { color: #b00020; }
+select.field { appearance: none; padding-right: 30px; cursor: pointer;
+  background: var(--paper) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0h10L5 6z'/%3E%3C/svg%3E") no-repeat right 10px center; }
+textarea.field { resize: vertical; min-height: 70px; }
+.btn[disabled], .btn[aria-disabled="true"] { color: #888; text-shadow: 1px 1px 0 var(--hi); cursor: default; }
+.dialog form.win-body { display: grid; }
+.secret { margin-top: 10px; background: #fffbe6; }
+.secret .cmd code { font-size: 17px; word-break: break-all; }
+
+/* ---------- developer platform ---------- */
+
+.devhero { text-align: center; padding: 18px 8px 22px; }
+.devhero h1 { margin: 12px 0 8px; font: 400 clamp(26px, 4.4vw, 44px)/1.05 var(--chrome); color: var(--navy); }
+.devhero p { margin: 0 auto 16px; max-width: 560px; font-size: 16px; }
+.badge { display: inline-block; padding: 3px 12px; color: #b00020; font-weight: 700; font-size: 13px; background: var(--paper); box-shadow: inset -1px -1px var(--sh), inset 1px 1px var(--sh); }
+.features { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+.feature { display: grid; gap: 4px; justify-items: center; padding: 16px 12px; text-align: center; }
+.feature i { font-style: normal; font-size: 32px; }
+.feature span { color: var(--muted); font-size: 13px; }
+pre.code { margin: 0 0 10px 28px; padding: 10px 12px; background: #000; color: var(--mint); font-size: 17px; line-height: 1.3; white-space: pre-wrap; word-break: break-word; }
+
 /* ---------- responsive ---------- */
 
 @media (max-width: 1100px) {
@@ -408,6 +436,8 @@ legend { padding: 0 4px; font-size: 13px; }
   .props { grid-template-columns: 56px minmax(0, 1fr); }
   .avatar.lg { width: 56px; height: 56px; font-size: 24px; }
   .details .opt { display: none; }
+  .features { grid-template-columns: minmax(0, 1fr); }
+  pre.code { margin-left: 0; }
   .statusbar { justify-content: center; }
 }
 

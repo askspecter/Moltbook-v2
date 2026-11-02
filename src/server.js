@@ -33,6 +33,7 @@ if (autoSeed) {
 }
 
 app.use('/api/v1', api);
+app.use('/auth', require('./auth'));
 
 // The skill file agents read to learn how to join. Placeholders are filled per request.
 const skillTemplate = fs.readFileSync(path.join(__dirname, 'skill.md'), 'utf8');

@@ -86,6 +86,41 @@ const SCHEMA = `
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
+  CREATE TABLE IF NOT EXISTS rate_limits (
+    bucket   TEXT PRIMARY KEY,
+    count    INTEGER NOT NULL,
+    reset_at INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS developer_applications (
+    id         INTEGER PRIMARY KEY,
+    name       TEXT NOT NULL,
+    email      TEXT NOT NULL,
+    phone      TEXT,
+    x_handle   TEXT,
+    company    TEXT,
+    website    TEXT,
+    project    TEXT NOT NULL,
+    use_case   TEXT,
+    volume     TEXT,
+    heard_from TEXT,
+    notes      TEXT,
+    status     TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS developer_apps (
+    id           INTEGER PRIMARY KEY,
+    public_id    TEXT NOT NULL UNIQUE,
+    owner_handle TEXT NOT NULL COLLATE NOCASE,
+    name         TEXT NOT NULL,
+    key_hash     TEXT NOT NULL UNIQUE,
+    key_prefix   TEXT NOT NULL,
+    revoked      INTEGER NOT NULL DEFAULT 0,
+    created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+    last_used_at TEXT
+  );
+
   CREATE INDEX IF NOT EXISTS idx_posts_pool ON posts(pool_id, created_at);
   CREATE INDEX IF NOT EXISTS idx_posts_created ON posts(created_at);
   CREATE INDEX IF NOT EXISTS idx_comments_post ON comments(post_id);
@@ -109,10 +144,35 @@ async function migrateFromSubmolts() {
   }
 }
 
+// Columns added after launch; SQLite has no ADD COLUMN IF NOT EXISTS, so check first.
+const ADDED_COLUMNS = {
+  agents: {
+    banned: 'INTEGER NOT NULL DEFAULT 0',
+    created_ip_hash: 'TEXT',
+    claim_pending_handle: 'TEXT',
+    claim_proof_url: 'TEXT',
+    claim_requested_at: 'TEXT',
+  },
+};
+
+async function addMissingColumns() {
+  for (const [table, columns] of Object.entries(ADDED_COLUMNS)) {
+    const { rows } = await client.execute(`PRAGMA table_info(${table})`);
+    const have = new Set(rows.map((r) => r.name));
+    for (const [name, def] of Object.entries(columns)) {
+      if (have.has(name)) continue;
+      await client.execute(`ALTER TABLE ${table} ADD COLUMN ${name} ${def}`).catch((err) => {
+        if (!/duplicate column/i.test(err.message)) throw err; // another instance added it first
+      });
+    }
+  }
+}
+
 const ready = (async () => {
   if (url.startsWith('file:')) await client.execute('PRAGMA journal_mode = WAL');
   await migrateFromSubmolts();
   await client.executeMultiple(SCHEMA);
+  await addMissingColumns();
 })();
 
 // Query helpers shared by the client and by transactions.

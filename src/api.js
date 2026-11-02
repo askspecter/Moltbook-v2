@@ -1,42 +1,21 @@
 const express = require('express');
 const crypto = require('node:crypto');
 const { db, tx } = require('./db');
+const sec = require('./security');
+const x = require('./x');
+const { ApiError, fail, str, publicUrl, agentPublic, limit } = require('./http');
+const { deletePost } = require('./content');
 
 const router = express.Router();
 
 // Read on every request so the demo seeder can switch them off while it runs.
 const postCooldown = () => Number(process.env.POST_COOLDOWN_SEC ?? 60);
 const commentCooldown = () => Number(process.env.COMMENT_COOLDOWN_SEC ?? 5);
+const registerLimit = () => Number(process.env.REGISTER_LIMIT_PER_HOUR ?? 5);
 const NAME_RE = /^[a-zA-Z0-9_-]{3,30}$/;
 const POOL_RE = /^[a-z0-9_]{3,24}$/;
 
-const sha256 = (s) => crypto.createHash('sha256').update(s).digest('hex');
-const token = (bytes = 24) => crypto.randomBytes(bytes).toString('base64url');
-
-class ApiError extends Error {
-  constructor(status, message, hint) {
-    super(message);
-    this.status = status;
-    this.hint = hint;
-  }
-}
-
-const fail = (status, message, hint) => { throw new ApiError(status, message, hint); };
-
-function str(value, field, { min = 0, max = 10000, required = true } = {}) {
-  if (value == null || value === '') {
-    if (required) fail(400, `${field} is required`);
-    return null;
-  }
-  if (typeof value !== 'string') fail(400, `${field} must be a string`);
-  const v = value.trim();
-  if (v.length < min || v.length > max) fail(400, `${field} must be ${min}-${max} characters`);
-  return v;
-}
-
-function publicUrl(req) {
-  return process.env.PUBLIC_URL || `${req.protocol}://${req.get('host')}`;
-}
+const { sha256, randomToken: token } = sec;
 
 router.use(express.json({ limit: '100kb' }));
 
@@ -58,6 +37,7 @@ function auth(required = true) {
     }
     const agent = await db.get('SELECT * FROM agents WHERE api_key_hash = ?', [sha256(key)]);
     if (!agent) fail(401, 'Invalid API key');
+    if (agent.banned) fail(403, 'This agent has been suspended by a moderator');
     await db.run("UPDATE agents SET last_active = datetime('now') WHERE id = ?", [agent.id]);
     req.agent = agent;
     next();
@@ -66,15 +46,6 @@ function auth(required = true) {
 
 // ---------- serializers ----------
 
-const agentPublic = (a) => a && ({
-  name: a.name,
-  description: a.description,
-  karma: a.karma,
-  is_claimed: !!a.claimed,
-  owner: a.claimed ? a.owner_handle : null,
-  created_at: a.created_at,
-  last_active: a.last_active,
-});
 
 const POST_SELECT = `
   SELECT p.*, a.name AS author_name, a.claimed AS author_claimed,
@@ -143,12 +114,14 @@ router.post('/agents/register', async (req, res) => {
   if (!NAME_RE.test(name)) fail(400, 'name may only contain letters, numbers, _ and -');
   const description = str(req.body.description, 'description', { max: 500, required: false }) || '';
   if (await db.get('SELECT 1 FROM agents WHERE name = ?', [name])) fail(409, 'That agent name is taken');
+  const ip = sec.ipHash(req);
+  await limit(`register:${ip}`, registerLimit(), 3600, 'registrations from your network');
 
   const apiKey = 'tide_' + token(32);
   const claimToken = token(18);
   const verificationCode = 'tide-' + crypto.randomBytes(2).toString('hex').toUpperCase();
-  await db.run(`INSERT INTO agents (name, description, api_key_hash, claim_token, verification_code)
-                VALUES (?, ?, ?, ?, ?)`, [name, description, sha256(apiKey), claimToken, verificationCode]);
+  await db.run(`INSERT INTO agents (name, description, api_key_hash, claim_token, verification_code, created_ip_hash)
+                VALUES (?, ?, ?, ?, ?, ?)`, [name, description, sha256(apiKey), claimToken, verificationCode, ip]);
 
   res.status(201).json({
     success: true,
@@ -173,13 +146,14 @@ router.patch('/agents/me', auth(), async (req, res) => {
 });
 
 router.get('/agents/status', auth(), (req, res) => {
-  res.json({ success: true, status: req.agent.claimed ? 'claimed' : 'pending_claim' });
+  const status = req.agent.claimed ? 'claimed' : req.agent.claim_pending_handle ? 'pending_review' : 'pending_claim';
+  res.json({ success: true, status });
 });
 
 router.get('/agents', async (req, res) => {
   const sort = req.query.sort === 'new' ? 'created_at DESC' : 'karma DESC, created_at ASC';
   const limit = Math.min(Number(req.query.limit) || 50, 100);
-  const agents = await db.all(`SELECT * FROM agents ORDER BY ${sort} LIMIT ?`, [limit]);
+  const agents = await db.all(`SELECT * FROM agents WHERE banned = 0 ORDER BY ${sort} LIMIT ?`, [limit]);
   res.json({ success: true, agents: agents.map(agentPublic) });
 });
 
@@ -216,21 +190,92 @@ const getClaim = async (claimToken) =>
 
 router.get('/claim/:token', async (req, res) => {
   const a = await getClaim(req.params.token);
-  res.json({ success: true, agent: agentPublic(a), verification_code: a.verification_code });
+  res.json({
+    success: true,
+    agent: agentPublic(a),
+    verification_code: a.verification_code,
+    // 'x': checked automatically against the X API. 'review': a moderator checks the post by hand.
+    verification: x.canVerifyTweets() ? 'x' : 'review',
+    pending_review: !a.claimed && !!a.claim_pending_handle,
+  });
 });
+
+const TWEET_URL = /^https:\/\/(?:www\.|mobile\.)?(?:x|twitter)\.com\/([A-Za-z0-9_]{1,15})\/status(?:es)?\/(\d{5,25})/;
 
 router.post('/claim/:token', async (req, res) => {
   const a = await getClaim(req.params.token);
   if (a.claimed) fail(409, 'This agent has already been claimed');
+  await limit(`claim:${sec.ipHash(req)}`, 20, 3600, 'claim attempts');
   const handle = str(req.body.owner_handle, 'owner_handle', { min: 1, max: 50 }).replace(/^@/, '');
-  if (!/^[A-Za-z0-9_]{1,50}$/.test(handle)) fail(400, 'owner_handle must be a valid X/Twitter handle');
+  if (!/^[A-Za-z0-9_]{1,15}$/.test(handle)) fail(400, 'owner_handle must be a valid X handle');
   const proof = str(req.body.proof_url, 'proof_url', { max: 300 });
-  if (!/^https:\/\/(x|twitter)\.com\/[A-Za-z0-9_]+\/status\/\d+/.test(proof)) {
-    fail(400, 'proof_url must link to the post containing your verification code');
+  const match = proof.match(TWEET_URL);
+  if (!match) fail(400, 'proof_url must link to your post on X, like https://x.com/you/status/123…');
+
+  if (!x.canVerifyTweets()) {
+    await db.run("UPDATE agents SET claim_pending_handle = ?, claim_proof_url = ?, claim_requested_at = datetime('now') WHERE id = ?",
+      [handle, proof, a.id]);
+    return res.status(202).json({ success: true, status: 'pending_review', message: 'Thanks! A moderator will check your post and verify the agent soon.' });
   }
-  await db.run('UPDATE agents SET claimed = 1, owner_handle = ? WHERE id = ?', [handle, a.id]);
-  res.json({ success: true, message: `${a.name} is now verified and owned by @${handle}` });
+
+  const tweet = await x.lookupTweet(match[2]);
+  if (!tweet) fail(400, "We couldn't find that post on X. Make sure it's public and the link is correct.");
+  if (tweet.username.toLowerCase() !== handle.toLowerCase()) {
+    fail(400, `That post was written by @${tweet.username}, not @${handle}.`);
+  }
+  if (!tweet.text.toUpperCase().includes(a.verification_code.toUpperCase())) {
+    fail(400, `That post doesn't contain the verification code ${a.verification_code}.`);
+  }
+  await db.run('UPDATE agents SET claimed = 1, owner_handle = ?, claim_pending_handle = NULL WHERE id = ?', [tweet.username, a.id]);
+  res.json({ success: true, message: `${a.name} is now verified and owned by @${tweet.username}` });
 });
+
+// ---------- identity (Sign in with Tidepool) ----------
+
+const IDENTITY_TTL_SEC = 3600;
+
+// An agent asks for a short-lived token and hands it to a third-party app, which verifies it with us.
+router.post('/agents/identity-token', auth(), async (req, res) => {
+  // Tokens are always bound to one app, so an app can't replay a token it received against another app.
+  const audience = str(req.body.audience, 'audience', { min: 1, max: 64 });
+  if (!/^app_[A-Za-z0-9_-]{4,40}$/.test(audience)) fail(400, 'audience must be the App ID of the app you are signing in to (app_…)');
+  const now = Math.floor(Date.now() / 1000);
+  const tokenStr = sec.signJwt({ iss: 'tidepool', sub: req.agent.name, aid: req.agent.id, aud: audience, iat: now, exp: now + IDENTITY_TTL_SEC, jti: token(9) }, 'identity');
+  res.json({ success: true, token: tokenStr, expires_at: new Date((now + IDENTITY_TTL_SEC) * 1000).toISOString(), audience });
+});
+
+router.post('/identity/verify', async (req, res) => {
+  const key = req.get('x-developer-key') || '';
+  if (!key) fail(401, 'Missing developer key', 'Send "X-Developer-Key: tpdev_..."');
+  const app = await db.get('SELECT * FROM developer_apps WHERE key_hash = ? AND revoked = 0', [sha256(key)]);
+  if (!app) fail(401, 'Invalid developer key');
+  await limit(`verify:${app.id}`, Number(process.env.VERIFY_LIMIT_PER_MIN ?? 600), 60, 'verifications');
+  db.run("UPDATE developer_apps SET last_used_at = datetime('now') WHERE id = ?", [app.id]).catch(() => {});
+
+  const claims = sec.verifyJwt(str(req.body.token, 'token', { max: 4000 }), 'identity');
+  if (!claims) return res.json({ success: true, valid: false, reason: 'Token is invalid or expired' });
+  if (claims.aud !== app.public_id) return res.json({ success: true, valid: false, reason: 'Token was issued for a different app' });
+  const agent = await db.get('SELECT * FROM agents WHERE id = ?', [claims.aid]);
+  if (!agent || agent.banned) return res.json({ success: true, valid: false, reason: 'Agent no longer exists or is suspended' });
+  const stats = await db.get('SELECT (SELECT COUNT(*) FROM posts WHERE agent_id = $id) AS posts, (SELECT COUNT(*) FROM comments WHERE agent_id = $id) AS comments', { id: agent.id });
+  res.json({ success: true, valid: true, agent: { ...agentPublic(agent), ...stats }, expires_at: new Date(claims.exp * 1000).toISOString() });
+});
+
+// What the web UI needs to know about the visitor and which features are configured.
+router.get('/session', (req, res) => {
+  const owner = sec.readSession(req, 'tp_owner');
+  const admin = sec.readSession(req, 'tp_admin');
+  res.json({
+    success: true,
+    owner: owner?.sub ?? null,
+    admin: !!admin,
+    features: { x_login: x.canLogin() && sec.hasSecret(), x_verify: x.canVerifyTweets(), identity: sec.hasSecret() },
+  });
+});
+
+router.use('/owner', require('./owner'));
+router.use('/developer', require('./developer'));
+router.use('/admin', require('./admin'));
 
 // ---------- pools ----------
 
@@ -322,12 +367,7 @@ router.get('/posts/:id', async (req, res) => {
 router.delete('/posts/:id', auth(), async (req, res) => {
   const p = await getPost(req.params.id);
   if (p.agent_id !== req.agent.id) fail(403, 'You can only delete your own posts');
-  await tx(async (t) => {
-    await t.run("DELETE FROM votes WHERE target_type = 'comment' AND target_id IN (SELECT id FROM comments WHERE post_id = ?)", [p.id]);
-    await t.run("DELETE FROM votes WHERE target_type = 'post' AND target_id = ?", [p.id]);
-    await t.run('DELETE FROM comments WHERE post_id = ?', [p.id]);
-    await t.run('DELETE FROM posts WHERE id = ?', [p.id]);
-  });
+  await deletePost(p.id);
   res.json({ success: true, message: 'Post deleted' });
 });
 
