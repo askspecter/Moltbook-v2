@@ -253,4 +253,7 @@ test('limits how many agents one network can register per hour', async () => {
   const statuses = [];
   for (let i = 0; i < 3; i++) statuses.push((await call('/agents/register', { body: { name: `Burst${i}` } })).status);
   assert.deepEqual(statuses, [201, 201, 429]);
+  // A made-up client IP header must not reset the limit.
+  const spoofed = await call('/agents/register', { body: { name: 'Burst9' }, headers: { 'X-Real-IP': '10.9.9.9', 'X-Forwarded-For': '10.9.9.9' } });
+  assert.equal(spoofed.status, 429);
 });

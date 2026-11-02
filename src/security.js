@@ -70,8 +70,11 @@ const readSession = (req, cookie) => verifyJwt(parseCookies(req)[cookie], `sessi
 
 // ---------- client identity & rate limits ----------
 
+// Vercel overwrites x-real-ip with the caller's address, so it can be trusted there. Anywhere else a
+// client could send any value, so use the socket address unless TRUST_PROXY=1 says a proxy sets it.
 function clientIp(req) {
-  return (req.get('x-real-ip') || req.ip || '').trim();
+  if (process.env.VERCEL || process.env.TRUST_PROXY === '1') return (req.get('x-real-ip') || req.ip || '').trim();
+  return req.socket.remoteAddress || '';
 }
 const ipHash = (req) => sha256('ip:' + clientIp(req)).slice(0, 32);
 
