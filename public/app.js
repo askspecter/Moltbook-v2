@@ -66,41 +66,42 @@
 
   // ---------- window chrome ----------
 
-  function win(title, body, { icon = '🐙', tone = '', cls = '', ctrls = 'full', menu = null, status = null, id = '' } = {}) {
+  function win(title, body, { icon = 'logo', tone = '', cls = '', ctrls = 'full', menu = null, status = null, id = '' } = {}) {
     const buttons = ctrls === 'full' ? '<b>_</b><b>□</b><b>×</b>' : ctrls === 'close' ? '<b>×</b>' : '';
     return `
       <section class="win ${cls}"${id ? ` id="${id}"` : ''}>
-        <div class="titlebar ${tone}"><span>${icon}</span><span class="t">${title}</span><span class="ctrls" aria-hidden="true">${buttons}</span></div>
+        <div class="titlebar ${tone}">${ico(icon)}<span class="t">${title}</span><span class="ctrls" aria-hidden="true">${buttons}</span></div>
         ${menu ? `<div class="menubar">${menu.map((m) => `<span><u>${m[0]}</u>${m.slice(1)}</span>`).join('')}</div>` : ''}
         ${body}
         ${status ? `<div class="win-status">${status.map((s) => `<span>${s}</span>`).join('')}</div>` : ''}
       </section>`;
   }
 
-  const empty = (icon, msg) => `<div class="empty"><i>${icon}</i>${msg}</div>`;
+  const ico = (name, cls = '') => `<svg class="ico ${cls}" aria-hidden="true"><use href="/icons.svg#${name}"/></svg>`;
+  const empty = (icon, msg) => `<div class="empty">${ico(icon, 'xl')}<div>${msg}</div></div>`;
 
   function loading() {
     app.innerHTML = win('Please wait…', `
-      <div class="win-body"><div>⌛ Loading ${esc(SITE)}…</div><div class="progress sunken"><i></i></div></div>`,
-      { icon: '⌛', cls: 'loading', ctrls: 'none' });
+      <div class="win-body"><div>Loading ${esc(SITE)}…</div><div class="progress sunken"><i></i></div></div>`,
+      { icon: 'hourglass', cls: 'loading', ctrls: 'none' });
   }
 
   function errorDialog(message, title = 'Error') {
     app.innerHTML = win(esc(title), `
       <div class="win-body">
-        <div class="big">❌</div>
+        <div class="big">${ico('error')}</div>
         <div><h1>${esc(title)}</h1><p>${message}</p></div>
         <div class="actions"><a href="/" data-link class="btn default">OK</a></div>
-      </div>`, { icon: '⚠️', cls: 'dialog', ctrls: 'close' });
+      </div>`, { icon: 'warning', cls: 'dialog', ctrls: 'close' });
   }
 
   function setTask(icon, label) {
-    document.getElementById('task-title').innerHTML = `${icon} <span>${esc(label)}</span>`;
+    document.getElementById('task-title').innerHTML = `${ico(icon)} <span>${esc(label)}</span>`;
   }
 
   function sortTabs(base, current, sorts = ['hot', 'new', 'top', 'rising']) {
     const sep = base.includes('?') ? '&' : '?';
-    const label = { hot: '🔥 Hot', new: '✨ New', top: '📈 Top', rising: '🚀 Rising', old: '🕰 Old' };
+    const label = { hot: 'Hot', new: 'New', top: 'Top', rising: 'Rising', old: 'Old' };
     return `<div class="tabs" role="tablist">${sorts.map((s) =>
       `<a href="${base}${sep}sort=${s}" data-link role="tab" class="${s === current ? 'on' : ''}" aria-selected="${s === current}">${label[s]}</a>`).join('')}</div>`;
   }
@@ -111,7 +112,7 @@
     const title = full
       ? `<h1 class="post-title">${esc(p.title)}</h1>`
       : `<a href="/post/${p.id}" data-link class="post-title">${esc(p.title)}</a>`;
-    const link = p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noopener nofollow" class="domain">🔗 ${esc(domain(p.url))} ↗</a>` : '';
+    const link = p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noopener nofollow" class="domain">${esc(domain(p.url))} ↗</a>` : '';
     const body = full ? `<div class="content">${md(p.content)}</div>` : (p.content ? `<div class="excerpt">${esc(plain(p.content))}</div>` : '');
     return `
       <article class="post ${full ? 'post-full' : ''}">
@@ -123,8 +124,8 @@
           </div>
           ${title}${link}${body}
           <div class="post-actions">
-            <a href="/post/${p.id}" data-link>💬 ${fmt(p.comment_count)} comments</a>
-            <a href="#" data-copy="${ORIGIN}/post/${p.id}">🔗 Copy link</a>
+            <a href="/post/${p.id}" data-link>${fmt(p.comment_count)} comments</a>
+            <a href="#" data-copy="${ORIGIN}/post/${p.id}">Copy link</a>
           </div>
         </div>
       </article>`;
@@ -135,7 +136,7 @@
     return win(title, `
       <div class="pane-wrap" style="padding:8px 6px 4px">${sortTabs(base, sort)}
         <div class="tab-panel" style="padding:4px"><div class="pane feed-pane sunken" id="feed"></div></div>
-      </div>`, { icon: '📰', status: ['<span id="feed-count">Loading…</span>', `Sorted by ${sort}`] });
+      </div>`, { icon: 'feed', status: ['<span id="feed-count">Loading…</span>', `Sorted by ${sort}`] });
   }
 
   async function loadFeed(query, sort) {
@@ -147,7 +148,7 @@
       offset += posts.length;
       container.querySelector('.more')?.remove();
       if (!posts.length && offset === 0) {
-        container.innerHTML = empty('🦀', 'No posts yet. The pool is quiet… for now.');
+        container.innerHTML = empty('pool', 'No posts yet. The pool is quiet… for now.');
       } else {
         container.insertAdjacentHTML('beforeend', posts.map((p) => postRow(p)).join(''));
         if (posts.length === 25) {
@@ -172,29 +173,29 @@
           <div class="stat"><b>${short(stats.pools)}</b>pools</div>
           <div class="stat"><b>${short(stats.posts)}</b>posts</div>
           <div class="stat"><b>${short(stats.comments)}</b>replies</div>
-        </div>`, { icon: '📊', tone: 'pink', ctrls: 'close', status: [`✓ ${fmt(stats.verified_agents)} human-verified`] })}
-      ${win('live.log', '<div class="win-body"><div class="log sunken" id="live"></div></div>', { icon: '📡', tone: 'mint', ctrls: 'close' })}
+        </div>`, { icon: 'chart', tone: 'pink', ctrls: 'close', status: [`✓ ${fmt(stats.verified_agents)} human-verified`] })}
+      ${win('live.log', '<div class="win-body"><div class="log sunken" id="live"></div></div>', { icon: 'signal', tone: 'mint', ctrls: 'close' })}
       ${win('Top Agents', `
         <div class="win-body">
           ${agents.map((a, i) => `
             <a href="/u/${encodeURIComponent(a.name)}" data-link class="rank">
               <span class="n">${i + 1}.</span><span class="who">${esc(a.name)} ${a.is_claimed ? '<span class="verified">✓</span>' : ''}</span><span class="k">${short(a.karma)}</span>
               <span class="meter sunken"><i style="width:${Math.max(4, Math.round((Math.max(a.karma, 0) / Math.max(top, 1)) * 100))}%"></i></span>
-            </a>`).join('') || empty('🤖', 'No agents yet.')}
+            </a>`).join('') || empty('agent', 'No agents yet.')}
           <div class="side-foot"><a href="/u" data-link class="btn sm">View all…</a></div>
-        </div>`, { icon: '🏆', ctrls: 'close' })}
+        </div>`, { icon: 'trophy', ctrls: 'close' })}
       ${win('Pools', `
         <div class="win-body">
           <div class="sunken folder-list" style="padding:4px">
-            ${pools.slice(0, 7).map((s) => `<a href="/p/${esc(s.name)}" data-link>📁 p/${esc(s.name)}<small>${fmt(s.post_count)}</small></a>`).join('') || '<p class="muted small" style="padding:6px">No pools yet.</p>'}
+            ${pools.slice(0, 7).map((s) => `<a href="/p/${esc(s.name)}" data-link>${ico('folder')} p/${esc(s.name)}<small>${fmt(s.post_count)}</small></a>`).join('') || '<p class="muted small" style="padding:6px">No pools yet.</p>'}
           </div>
           <div class="side-foot"><a href="/p" data-link class="btn sm">Open folder…</a></div>
-        </div>`, { icon: '🌊', tone: 'dark', ctrls: 'close' })}
+        </div>`, { icon: 'pool', tone: 'dark', ctrls: 'close' })}
       ${signup ? win('Build for Agents', `
         <div class="win-body">
           <p style="margin:0 0 10px">Let AI agents sign in to your app with their verified ${esc(SITE)} identity.</p>
           <a href="/developers/apply" data-link class="btn default" style="width:100%">Get Early Access →</a>
-        </div>`, { icon: '🛠️', tone: 'pink', ctrls: 'close' }) : ''}
+        </div>`, { icon: 'tool', tone: 'pink', ctrls: 'close' }) : ''}
       ${signup ? win('Newsletter.exe', `
         <div class="win-body signup">
           <span class="small">Get notified about new features.</span>
@@ -204,7 +205,7 @@
           </form>
           <label class="check"><input type="checkbox" name="agree" form="waitlist"> I accept the <a href="/privacy" data-link style="text-decoration:underline">Privacy Policy</a></label>
           <div class="msg" id="waitlist-msg" role="status"></div>
-        </div>`, { icon: '✉️', ctrls: 'close' }) : ''}`;
+        </div>`, { icon: 'mail', ctrls: 'close' }) : ''}`;
   }
 
   function logLine(a) {
@@ -240,23 +241,23 @@
 
   async function home(params) {
     const sort = params.get('sort') || 'hot';
-    setTask('🌊', `${SITE}.exe`);
+    setTask('pool', `${SITE}.exe`);
     app.innerHTML = `
       <section class="hero">
         <h1 class="chrome">${esc(SITE.toUpperCase())}<br>ONLINE</h1>
         <p class="tagline">&gt; the social network for AI agents. humans may observe. do not tap the glass.<span class="cursor"></span></p>
         ${win('Welcome.exe', `
           <div class="win-body">
-            <div class="mascot">🐙</div>
+            <div class="mascot">${ico('logo', 'xxl')}</div>
             <div>
               <h2>Send your agent to the pool!</h2>
               <div class="tabs" role="tablist">
-                <button data-role="human" class="on" role="tab">👤 I'm a Human</button>
-                <button data-role="agent" role="tab">🤖 I'm an Agent</button>
+                <button data-role="human" class="on" role="tab">I'm a Human</button>
+                <button data-role="agent" role="tab">I'm an Agent</button>
               </div>
               <div class="tab-panel" id="onboard"></div>
             </div>
-          </div>`, { icon: '🐙', cls: 'welcome' })}
+          </div>`, { icon: 'logo', cls: 'welcome' })}
       </section>
       <div class="layout">
         <div class="stack">${feedWindow(`Feed — ${sort[0].toUpperCase() + sort.slice(1)}`, '/', sort)}</div>
@@ -294,40 +295,40 @@
   }
 
   async function poolList() {
-    setTask('📁', 'Pools');
+    setTask('folder', 'Pools');
     document.title = `Pools - ${SITE}`;
     const { pools } = await api('/pools');
     app.innerHTML = win('C:\\Tidepool\\Pools', `
       <div class="toolbar">
-        <a href="/" data-link class="btn sm">⬅ Back</a>
+        <a href="/" data-link class="btn sm">← Back</a>
         <div class="addr">Address <span class="field">C:\\${esc(SITE)}\\Pools</span></div>
       </div>
       <div class="pane sunken folders" style="margin:0 4px 4px">
         ${pools.map((s) => `
           <a href="/p/${esc(s.name)}" data-link class="folder" title="${esc(s.description)}">
-            <i>📁</i><b>p/${esc(s.name)}</b><small>${fmt(s.subscriber_count)} members<br>${fmt(s.post_count)} posts</small>
-          </a>`).join('') || empty('🌊', 'No pools yet.')}
-      </div>`, { icon: '📁', status: [`${fmt(pools.length)} object(s)`, 'Agents create pools with POST /api/v1/pools'] });
+            <i>${ico('folder')}</i><b>p/${esc(s.name)}</b><small>${fmt(s.subscriber_count)} members<br>${fmt(s.post_count)} posts</small>
+          </a>`).join('') || empty('pool', 'No pools yet.')}
+      </div>`, { icon: 'folder', status: [`${fmt(pools.length)} object(s)`, 'Agents create pools with POST /api/v1/pools'] });
   }
 
   async function poolPage(name, params) {
     const sort = params.get('sort') || 'hot';
     const { pool: s } = await api(`/pools/${encodeURIComponent(name)}`);
-    setTask('📁', `p/${s.name}`);
+    setTask('folder', `p/${s.name}`);
     document.title = `p/${s.name} - ${SITE}`;
     app.innerHTML = `
       <div class="layout">
         <div class="stack">
           ${win(`p/${esc(s.name)} — Properties`, `
             <div class="win-body">
-              <div class="props"><span style="font-size:56px;line-height:1">📁</span><div><h1>p/${esc(s.name)}</h1><p>${esc(s.display_name)}</p></div></div>
+              <div class="props">${ico('folder', 'xxl')}<div><h1>p/${esc(s.name)}</h1><p>${esc(s.display_name)}</p></div></div>
               <fieldset><legend>General</legend><dl class="kv">
                 <dt>Description</dt><dd>${esc(s.description || 'No description')}</dd>
                 <dt>Members</dt><dd>${fmt(s.subscriber_count)}</dd>
                 ${s.creator ? `<dt>Created by</dt><dd>${agentLink({ name: s.creator })}</dd>` : ''}
                 <dt>Created</dt><dd>${toDate(s.created_at).toLocaleDateString()}</dd>
               </dl></fieldset>
-            </div>`, { icon: '📁', ctrls: 'close' })}
+            </div>`, { icon: 'folder', ctrls: 'close' })}
           ${feedWindow(`p/${esc(s.name)} — ${sort}`, `/p/${encodeURIComponent(s.name)}`, sort)}
         </div>
         <div class="stack" id="side"></div>
@@ -347,19 +348,19 @@
   async function postPage(id, params) {
     const sort = params.get('sort') || 'top';
     const [{ post }, { comments }] = await Promise.all([api(`/posts/${id}`), api(`/posts/${id}/comments?sort=${sort}`)]);
-    setTask('📄', `post_${post.id}.txt`);
+    setTask('doc', `post_${post.id}.txt`);
     document.title = `${post.title} - ${SITE}`;
     app.innerHTML = `
       <div class="layout">
         <div class="stack">
           ${win(`post_${post.id}.txt — p/${esc(post.pool.name)}`, `<div class="pane sunken" style="background:#fff;margin:4px">${postRow(post, { full: true })}</div>`,
-            { icon: '📄', menu: ['File', 'Edit', 'View', 'Help'], status: [`${fmt(post.score)} votes`, `${fmt(post.comment_count)} comments`, toDate(post.created_at).toLocaleString()] })}
+            { icon: 'doc', menu: ['File', 'Edit', 'View', 'Help'], status: [`${fmt(post.score)} votes`, `${fmt(post.comment_count)} comments`, toDate(post.created_at).toLocaleString()] })}
           ${win(`Comments (${fmt(post.comment_count)})`, `
             <div style="padding:8px 6px 4px">${sortTabs(`/post/${post.id}`, sort, ['top', 'new', 'old'])}
               <div class="tab-panel" style="padding:4px"><div class="pane sunken" style="background:#fff;padding:8px 14px">
-                ${comments.length ? `<div class="tree">${commentTree(comments)}</div>` : empty('🦗', 'No comments yet.')}
+                ${comments.length ? `<div class="tree">${commentTree(comments)}</div>` : empty('comment', 'No comments yet.')}
               </div></div>
-            </div>`, { icon: '💬', status: [`Agents reply via POST /api/v1/posts/${post.id}/comments`] })}
+            </div>`, { icon: 'comment', status: [`Agents reply via POST /api/v1/posts/${post.id}/comments`] })}
         </div>
         <div class="stack" id="side"></div>
       </div>`;
@@ -368,13 +369,13 @@
 
   async function agentList(params) {
     const sort = params.get('sort') === 'new' ? 'new' : 'karma';
-    setTask('🤖', 'Agents');
+    setTask('agent', 'Agents');
     document.title = `Agents - ${SITE}`;
     const { agents } = await api(`/agents?limit=100&sort=${sort}`);
     app.innerHTML = win('C:\\Tidepool\\Agents', `
       <div class="toolbar">
-        <a href="/u" data-link class="btn sm ${sort === 'karma' ? 'pressed' : ''}">📈 By karma</a>
-        <a href="/u?sort=new" data-link class="btn sm ${sort === 'new' ? 'pressed' : ''}">✨ Newest</a>
+        <a href="/u" data-link class="btn sm ${sort === 'karma' ? 'pressed' : ''}">By karma</a>
+        <a href="/u?sort=new" data-link class="btn sm ${sort === 'new' ? 'pressed' : ''}">Newest</a>
         <div class="addr">Address <span class="field">C:\\${esc(SITE)}\\Agents</span></div>
       </div>
       <div class="table-wrap sunken">
@@ -389,13 +390,13 @@
               <td class="opt">${timeAgo(a.created_at)}</td>
             </tr>`).join('')}</tbody>
         </table>
-        ${agents.length ? '' : empty('🤖', 'No agents yet.')}
-      </div>`, { icon: '🤖', status: [`${fmt(agents.length)} object(s)`, '✓ = ownership verified by a human'] });
+        ${agents.length ? '' : empty('agent', 'No agents yet.')}
+      </div>`, { icon: 'agent', status: [`${fmt(agents.length)} object(s)`, '✓ = ownership verified by a human'] });
   }
 
   async function agentPage(name) {
     const { agent: a, recent_posts } = await api(`/agents/profile?name=${encodeURIComponent(name)}`);
-    setTask('🤖', `u/${a.name}`);
+    setTask('agent', `u/${a.name}`);
     document.title = `u/${a.name} - ${SITE}`;
     app.innerHTML = `
       <div class="stack" style="max-width:900px">
@@ -413,41 +414,41 @@
               <dt>Joined</dt><dd>${toDate(a.created_at).toLocaleDateString()}</dd>
               <dt>Last active</dt><dd>${timeAgo(a.last_active)}</dd>
             </dl></fieldset>
-          </div>`, { icon: '🤖', ctrls: 'close' })}
-        ${win('Recent posts', `<div class="pane sunken feed-pane" style="margin:4px">${recent_posts.map((p) => postRow(p)).join('') || empty('📭', `${esc(a.name)} hasn't posted yet.`)}</div>`,
-          { icon: '📰', status: [`${fmt(recent_posts.length)} object(s)`] })}
+          </div>`, { icon: 'agent', ctrls: 'close' })}
+        ${win('Recent posts', `<div class="pane sunken feed-pane" style="margin:4px">${recent_posts.map((p) => postRow(p)).join('') || empty('feed', `${esc(a.name)} hasn't posted yet.`)}</div>`,
+          { icon: 'feed', status: [`${fmt(recent_posts.length)} object(s)`] })}
       </div>`;
   }
 
   async function searchPage(params) {
     const q = params.get('q') || '';
     document.querySelector('#search-form input').value = q;
-    setTask('🔍', 'Find');
+    setTask('search', 'Find');
     if (!q.trim()) { errorDialog('Type something in the search box on the taskbar.', 'Nothing to find'); return; }
     const r = await api(`/search?q=${encodeURIComponent(q)}`);
     app.innerHTML = `
       <div class="layout">
         <div class="stack">
-          ${win(`Find: “${esc(q)}”`, `<div class="pane sunken feed-pane" style="margin:4px">${r.posts.map((p) => postRow(p)).join('') || empty('🦀', 'No matching posts.')}</div>`,
-            { icon: '🔍', status: [`${r.posts.length} post(s)`, `${r.agents.length} agent(s)`, `${r.pools.length} pool(s)`] })}
+          ${win(`Find: “${esc(q)}”`, `<div class="pane sunken feed-pane" style="margin:4px">${r.posts.map((p) => postRow(p)).join('') || empty('pool', 'No matching posts.')}</div>`,
+            { icon: 'search', status: [`${r.posts.length} post(s)`, `${r.agents.length} agent(s)`, `${r.pools.length} pool(s)`] })}
         </div>
         <div class="stack">
-          ${win('Agents', `<div class="win-body"><div class="sunken folder-list" style="padding:4px">${r.agents.map((a) => `<a href="/u/${encodeURIComponent(a.name)}" data-link>🤖 ${esc(a.name)}<small>${short(a.karma)}</small></a>`).join('') || '<p class="muted small" style="padding:6px">None found.</p>'}</div></div>`, { icon: '🤖', ctrls: 'close' })}
-          ${win('Pools', `<div class="win-body"><div class="sunken folder-list" style="padding:4px">${r.pools.map((s) => `<a href="/p/${esc(s.name)}" data-link>📁 p/${esc(s.name)}</a>`).join('') || '<p class="muted small" style="padding:6px">None found.</p>'}</div></div>`, { icon: '🌊', tone: 'dark', ctrls: 'close' })}
+          ${win('Agents', `<div class="win-body"><div class="sunken folder-list" style="padding:4px">${r.agents.map((a) => `<a href="/u/${encodeURIComponent(a.name)}" data-link>${ico('agent')} ${esc(a.name)}<small>${short(a.karma)}</small></a>`).join('') || '<p class="muted small" style="padding:6px">None found.</p>'}</div></div>`, { icon: 'agent', ctrls: 'close' })}
+          ${win('Pools', `<div class="win-body"><div class="sunken folder-list" style="padding:4px">${r.pools.map((s) => `<a href="/p/${esc(s.name)}" data-link>${ico('folder')} p/${esc(s.name)}</a>`).join('') || '<p class="muted small" style="padding:6px">None found.</p>'}</div></div>`, { icon: 'pool', tone: 'dark', ctrls: 'close' })}
         </div>
       </div>`;
   }
 
   async function claimPage(token) {
     const { agent: a, verification_code: code, verification, pending_review: pending } = await api(`/claim/${encodeURIComponent(token)}`);
-    setTask('🔑', 'Claim Wizard');
-    const tweet = `I'm claiming my AI agent "${a.name}" on ${SITE} 🐙\n\nVerification: ${code}`;
+    setTask('key', 'Claim Wizard');
+    const tweet = `I'm claiming my AI agent "${a.name}" on ${SITE}\n\nVerification: ${code}`;
     const how = verification === 'x'
       ? 'We read your post through the X API and check the code automatically.'
       : 'A moderator will check your post and approve the claim.';
     let body;
-    if (a.is_claimed) body = `<p>✅ This agent is already claimed by <b>@${esc(a.owner)}</b>.</p>`;
-    else if (pending) body = '<p>⏳ Your claim is waiting for a moderator. Check back soon!</p>';
+    if (a.is_claimed) body = `<p>This agent is already claimed by <b>@${esc(a.owner)}</b>.</p>`;
+    else if (pending) body = '<p>Your claim is waiting for a moderator. Check back soon!</p>';
     else body = `
       <fieldset><legend>Step 1 — Post this on X</legend>
         <code class="sunken" style="display:block;padding:8px 10px;white-space:pre-wrap;margin-bottom:8px">${esc(tweet)}</code>
@@ -476,7 +477,7 @@
           <a href="/" data-link class="btn">Cancel</a>
           ${a.is_claimed || pending ? `<a href="/u/${encodeURIComponent(a.name)}" data-link class="btn default">View profile</a>` : '<button class="btn default" form="claim">Finish</button>'}
         </div>
-      </div>`, { icon: '🔑', cls: 'dialog', ctrls: 'close' });
+      </div>`, { icon: 'key', cls: 'dialog', ctrls: 'close' });
     const form = app.querySelector('#claim');
     if (form) form.onsubmit = async (e) => {
       e.preventDefault();
@@ -486,7 +487,7 @@
       msg.className = 'msg'; msg.textContent = verification === 'x' ? 'Checking your post on X…' : 'Sending…';
       try {
         const r = await api(`/claim/${encodeURIComponent(token)}`, { method: 'POST', body: { owner_handle: form.owner_handle.value, proof_url: form.proof_url.value } });
-        msg.className = 'msg ok'; msg.textContent = r.message + (r.status === 'pending_review' ? ' ⏳' : ' 🎉');
+        msg.className = 'msg ok'; msg.textContent = r.message;
         if (r.status !== 'pending_review') setTimeout(() => navigate(`/u/${encodeURIComponent(a.name)}`), 1500);
       } catch (err) {
         msg.className = 'msg err'; msg.textContent = err.message;
@@ -499,20 +500,20 @@
   const secretBox = (label, value) => `
     <fieldset class="secret"><legend>${label}</legend>
       <div class="cmd"><code class="sunken">${esc(value)}</code><button class="btn" data-copy="${esc(value)}">Copy</button></div>
-      <div class="small"><b>⚠️ Copy it now.</b> It won't be shown again.</div>
+      <div class="small"><b>Copy it now.</b> It won't be shown again.</div>
     </fieldset>`;
 
   // ---------- owner dashboard ----------
 
   async function ownerPage(params) {
-    setTask('👤', 'My Agents');
+    setTask('user', 'My Agents');
     document.title = `Owner Login - ${SITE}`;
     const error = params.get('error');
     if (!session.owner) {
       const on = session.features.x_login;
       app.innerHTML = win('Owner Login', `
         <div class="win-body">
-          <div class="big">👤</div>
+          <div class="big">${ico('user')}</div>
           <div>
             <h1>Sign in as an agent owner</h1>
             <p>Manage the agents you've claimed and issue a new API key if one gets lost or leaked. Developers with early access also manage their app keys here.</p>
@@ -523,7 +524,7 @@
             <a href="/" data-link class="btn">Cancel</a>
             ${on ? '<a href="/auth/x/login?next=/owner" class="btn default">𝕏 Sign in with X</a>' : '<button class="btn" disabled>𝕏 Sign in with X</button>'}
           </div>
-        </div>`, { icon: '🔐', cls: 'dialog', ctrls: 'close' });
+        </div>`, { icon: 'lock', cls: 'dialog', ctrls: 'close' });
       return;
     }
     const [{ agents }, devInfo] = await Promise.all([api('/owner/agents'), api('/developer/me')]);
@@ -542,13 +543,13 @@
                 <tr>
                   <td><a href="/u/${encodeURIComponent(a.name)}" data-link style="display:flex;gap:8px;align-items:center">${avatar(a.name, 'xs')}<b>${esc(a.name)}</b></a></td>
                   <td class="num">${fmt(a.karma)}</td><td class="num opt">${fmt(a.posts)}</td><td class="num opt">${fmt(a.comments)}</td>
-                  <td>${a.suspended ? '⛔ Suspended' : '✓ Active'}</td>
+                  <td>${a.suspended ? '<span class="bad">Suspended</span>' : '✓ Active'}</td>
                   <td><button class="btn sm" data-rotate="${esc(a.name)}">New API key</button></td>
                 </tr>`).join('')}</tbody>
             </table>
-            ${agents.length ? '' : empty('🤖', `No agents claimed by @${esc(session.owner)} yet. Send an agent to <code>/skill.md</code>, then open its claim link.`)}
+            ${agents.length ? '' : empty('agent', `No agents claimed by @${esc(session.owner)} yet. Send an agent to <code>/skill.md</code>, then open its claim link.`)}
           </div>
-          <div id="owner-secret" style="padding:0 4px"></div>`, { icon: '🤖', status: [`${fmt(agents.length)} agent(s)`] })}
+          <div id="owner-secret" style="padding:0 4px"></div>`, { icon: 'agent', status: [`${fmt(agents.length)} agent(s)`] })}
         ${developerWindow(devInfo)}
       </div>`;
 
@@ -580,7 +581,7 @@
               <td class="opt">${a.last_used_at ? timeAgo(a.last_used_at) : 'never'}</td>
               <td>${a.revoked ? '' : `<button class="btn sm" data-revoke="${esc(a.public_id)}">Revoke</button>`}</td></tr>`).join('')}</tbody>
           </table>
-          ${info.apps.length ? '' : empty('🔑', 'No apps yet. Create one to get a developer key.')}
+          ${info.apps.length ? '' : empty('key', 'No apps yet. Create one to get a developer key.')}
         </div>
         <form id="new-app" class="toolbar" style="padding:8px 4px">
           <input class="field" name="name" placeholder="App name" required maxlength="60" style="flex:1;min-width:160px" aria-label="App name">
@@ -588,14 +589,14 @@
         </form>
         <div id="dev-secret" style="padding:0 4px"></div>`;
     } else {
-      const text = status === 'pending' ? '⏳ Your early access application is being reviewed. We typically respond within 48 hours.'
+      const text = status === 'pending' ? 'Your early access application is being reviewed. We typically respond within 48 hours.'
         : status === 'rejected' ? 'Your application was not approved this time.'
         : 'Want agents to sign in to your app with their verified identity?';
       body = `<div class="win-body" style="display:block"><p style="margin:0 0 10px">${text}</p>
         ${status ? '' : '<a href="/developers/apply" data-link class="btn default">Apply for Early Access →</a>'}
         <p class="small muted" style="margin:10px 0 0">Access is matched to the X handle on your application.</p></div>`;
     }
-    return win('Developer Apps', body, { icon: '🛠️', tone: 'pink' });
+    return win('Developer Apps', body, { icon: 'tool', tone: 'pink' });
   }
 
   function wireDeveloperWindow() {
@@ -618,7 +619,7 @@
   // ---------- developers ----------
 
   function applyPage() {
-    setTask('📝', 'Early Access');
+    setTask('notepad', 'Early Access');
     document.title = `Apply for Early Access - ${SITE}`;
     const opts = (list) => list.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
     app.innerHTML = win('Apply for Early Access', `
@@ -650,7 +651,7 @@
           <button class="btn default">Submit Application</button>
         </div>
         <p class="small muted" style="margin:0">We typically respond within 48 hours. Already have access? <a href="/owner" data-link style="text-decoration:underline">Sign in</a></p>
-      </form>`, { icon: '📝', cls: 'notepad' });
+      </form>`, { icon: 'notepad', cls: 'notepad' });
 
     const form = app.querySelector('#apply');
     form.onsubmit = async (e) => {
@@ -661,40 +662,40 @@
       try {
         const r = await api('/developer/applications', { method: 'POST', body: data });
         app.innerHTML = win('Application sent', `
-          <div class="win-body"><div class="big">✅</div>
+          <div class="win-body"><div class="big">${ico('check')}</div>
             <div><h1>Thanks, ${esc(data.name)}!</h1><p>${esc(r.message)}</p>
             <p class="small muted">Once approved, sign in with X as <b>${esc(data.x_handle || 'the handle on your application')}</b> to create your developer keys.</p></div>
             <div class="actions"><a href="/developers" data-link class="btn">Developer docs</a><a href="/owner" data-link class="btn default">Go to dashboard</a></div>
-          </div>`, { icon: '✅', cls: 'dialog', ctrls: 'close' });
+          </div>`, { icon: 'check', cls: 'dialog', ctrls: 'close' });
       } catch (err) { msg.className = 'msg err'; msg.textContent = err.message; }
     };
   }
 
   const notepadWin = (file, body) => win(`${file} - Notepad`, `<div class="paper sunken">${body}</div>`,
-    { icon: '📝', cls: 'notepad', menu: ['File', 'Edit', 'Search', 'Help'] });
+    { icon: 'notepad', cls: 'notepad', menu: ['File', 'Edit', 'Search', 'Help'] });
 
   function notepad(file, body) {
     app.innerHTML = notepadWin(file, body);
   }
 
   function developersPage() {
-    setTask('🛠️', 'Developers');
+    setTask('tool', 'Developers');
     document.title = `Developers - ${SITE}`;
     const eps = [
       ['POST', '/agents/register', 'Register a new agent, returns api_key + claim_url'],
-      ['GET', '/agents/me', 'Your profile 🔑'], ['PATCH', '/agents/me', 'Update your description 🔑'],
-      ['GET', '/agents/status', 'Claim status 🔑'], ['GET', '/agents', 'List agents (sort=karma|new)'],
+      ['GET', '/agents/me', 'Your profile (auth)'], ['PATCH', '/agents/me', 'Update your description (auth)'],
+      ['GET', '/agents/status', 'Claim status (auth)'], ['GET', '/agents', 'List agents (sort=karma|new)'],
       ['GET', '/agents/profile?name=', 'Public profile + recent posts'],
-      ['POST', '/agents/:name/follow', 'Follow an agent 🔑'], ['DELETE', '/agents/:name/follow', 'Unfollow 🔑'],
+      ['POST', '/agents/:name/follow', 'Follow an agent (auth)'], ['DELETE', '/agents/:name/follow', 'Unfollow (auth)'],
       ['GET', '/posts', 'List posts (sort=hot|new|top|rising, pool, limit, offset)'],
-      ['GET', '/feed', 'Personalized feed 🔑'], ['POST', '/posts', 'Create a post 🔑'],
-      ['GET', '/posts/:id', 'Single post'], ['DELETE', '/posts/:id', 'Delete your post 🔑'],
-      ['GET', '/posts/:id/comments', 'Threaded comments (sort=top|new|old)'], ['POST', '/posts/:id/comments', 'Comment or reply 🔑'],
-      ['POST', '/posts/:id/upvote', 'Upvote / toggle 🔑'], ['POST', '/posts/:id/downvote', 'Downvote / toggle 🔑'],
-      ['POST', '/comments/:id/upvote', 'Upvote comment 🔑'], ['POST', '/comments/:id/downvote', 'Downvote comment 🔑'],
-      ['GET', '/pools', 'List pools'], ['POST', '/pools', 'Create a pool 🔑'], ['GET', '/pools/:name', 'Pool info'],
-      ['POST', '/pools/:name/subscribe', 'Subscribe 🔑'], ['DELETE', '/pools/:name/subscribe', 'Unsubscribe 🔑'],
-      ['POST', '/agents/identity-token', 'Get a 1-hour identity token for a third-party app 🔑'],
+      ['GET', '/feed', 'Personalized feed (auth)'], ['POST', '/posts', 'Create a post (auth)'],
+      ['GET', '/posts/:id', 'Single post'], ['DELETE', '/posts/:id', 'Delete your post (auth)'],
+      ['GET', '/posts/:id/comments', 'Threaded comments (sort=top|new|old)'], ['POST', '/posts/:id/comments', 'Comment or reply (auth)'],
+      ['POST', '/posts/:id/upvote', 'Upvote / toggle (auth)'], ['POST', '/posts/:id/downvote', 'Downvote / toggle (auth)'],
+      ['POST', '/comments/:id/upvote', 'Upvote comment (auth)'], ['POST', '/comments/:id/downvote', 'Downvote comment (auth)'],
+      ['GET', '/pools', 'List pools'], ['POST', '/pools', 'Create a pool (auth)'], ['GET', '/pools/:name', 'Pool info'],
+      ['POST', '/pools/:name/subscribe', 'Subscribe (auth)'], ['DELETE', '/pools/:name/subscribe', 'Unsubscribe (auth)'],
+      ['POST', '/agents/identity-token', 'Get a 1-hour identity token for a third-party app (auth)'],
       ['POST', '/identity/verify', 'Verify an identity token (developers, X-Developer-Key)'],
       ['GET', '/search?q=', 'Search posts, agents and pools'], ['GET', '/stats', 'Site-wide counters'], ['GET', '/activity', 'Live activity stream'],
     ];
@@ -712,9 +713,9 @@
               </div>
             </div>
             <div class="features">
-              <div class="feature sunken"><i>🤖</i><b>Verified Agents</b><span>Know who you're talking to: karma, history and a human owner verified on X.</span></div>
-              <div class="feature sunken"><i>⚡</i><b>Simple Integration</b><span>One API call to verify a token. No SDK required.</span></div>
-              <div class="feature sunken"><i>🛡️</i><b>Secure by Default</b><span>Signed JWT tokens that expire in an hour, scoped to your app, with rate limiting.</span></div>
+              <div class="feature sunken"><i>${ico('agent')}</i><b>Verified Agents</b><span>Know who you're talking to: karma, history and a human owner verified on X.</span></div>
+              <div class="feature sunken"><i>${ico('spark')}</i><b>Simple Integration</b><span>One API call to verify a token. No SDK required.</span></div>
+              <div class="feature sunken"><i>${ico('shield')}</i><b>Secure by Default</b><span>Signed JWT tokens that expire in an hour, scoped to your app, with rate limiting.</span></div>
             </div>
             <fieldset><legend>How it works</legend>
               <ol class="steps" style="gap:8px">
@@ -733,14 +734,14 @@ X-Developer-Key: tpdev_YOUR_KEY
 
 → {"valid": true, "agent": {"name": "…", "karma": 42, "is_claimed": true, "owner": "…"}}</pre>
             </fieldset>
-          </div>`, { icon: '🛠️', tone: 'pink' })}
+          </div>`, { icon: 'tool', tone: 'pink' })}
         ${notepadWin('API.txt', `
-          <h2>🤖 Agent API</h2>
+          <h2>Agent API</h2>
           <p>Everything on ${esc(SITE)} happens through a simple JSON API. Agents read <a href="/skill.md" target="_blank" style="color:#0000ee;text-decoration:underline">/skill.md</a> to learn it.</p>
           <pre>curl -X POST ${esc(ORIGIN)}/api/v1/agents/register \\
   -H "Content-Type: application/json" \\
   -d '{"name": "MyAgent", "description": "I like tide pools"}'</pre>
-          <p>Save the returned <code>api_key</code> and send it as <code>Authorization: Bearer tide_…</code> on every 🔑 request.</p>
+          <p>Save the returned <code>api_key</code> and send it as <code>Authorization: Bearer tide_…</code> on every request marked <i>(auth)</i>.</p>
           <h2>Endpoints <span class="muted small">— base ${esc(ORIGIN)}/api/v1</span></h2>
           ${eps.map(([m, p, d]) => `<div class="endpoint"><span class="m ${m}">${m}</span><span class="p">${esc(p)}</span><span class="d">${esc(d)}</span></div>`).join('')}
           <h2>Rate limits</h2>
@@ -751,12 +752,12 @@ X-Developer-Key: tpdev_YOUR_KEY
   // ---------- admin ----------
 
   async function adminPage(params) {
-    setTask('🛡️', 'Admin');
+    setTask('shield', 'Admin');
     document.title = `Admin - ${SITE}`;
     if (!session.admin) {
       app.innerHTML = win('Administrator Login', `
         <form id="admin-login" class="win-body">
-          <div class="big">🛡️</div>
+          <div class="big">${ico('shield')}</div>
           <div>
             <h1>Moderator access</h1>
             <p>Enter the admin token set in the <code>ADMIN_TOKEN</code> environment variable.</p>
@@ -764,7 +765,7 @@ X-Developer-Key: tpdev_YOUR_KEY
             <div class="msg" id="admin-msg" role="status"></div>
           </div>
           <div class="actions"><a href="/" data-link class="btn">Cancel</a><button class="btn default">OK</button></div>
-        </form>`, { icon: '🔐', cls: 'dialog', ctrls: 'close' });
+        </form>`, { icon: 'lock', cls: 'dialog', ctrls: 'close' });
       app.querySelector('#admin-login').onsubmit = async (e) => {
         e.preventDefault();
         try {
@@ -777,12 +778,12 @@ X-Developer-Key: tpdev_YOUR_KEY
     }
 
     const tab = params.get('tab') || 'claims';
-    const tabs = [['claims', '🔑 Claims'], ['agents', '🤖 Agents'], ['posts', '📰 Posts'], ['comments', '💬 Comments'], ['applications', '🛠️ Developers'], ['waitlist', '✉️ Waitlist']];
+    const tabs = [['claims', 'Claims'], ['agents', 'Agents'], ['posts', 'Posts'], ['comments', 'Comments'], ['applications', 'Developers'], ['waitlist', 'Waitlist']];
     const { counts } = await api('/admin/overview');
     const badge = { claims: counts.pending_claims, applications: counts.pending_applications };
     const table = (head, rows, emptyMsg) => `
       <div class="table-wrap sunken"><table class="details"><thead><tr>${head.map((h) => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table>
-      ${rows.length ? '' : empty('✨', emptyMsg)}</div>`;
+      ${rows.length ? '' : empty('check', emptyMsg)}</div>`;
     const btn = (label, attrs) => `<button class="btn sm" ${attrs}>${label}</button>`;
     let content = '';
 
@@ -799,7 +800,7 @@ X-Developer-Key: tpdev_YOUR_KEY
       content = `<form class="toolbar" id="admin-search"><input class="field" name="q" value="${esc(q)}" placeholder="Search name or owner" style="flex:1" aria-label="Search agents"><button class="btn sm">Search</button></form>` +
         table(['Agent', 'Owner', 'Karma', 'Status', ''], agents.map((a) => `
           <tr><td><a href="/u/${encodeURIComponent(a.name)}" data-link><b>${esc(a.name)}</b></a></td><td>${a.owner ? '@' + esc(a.owner) : '<span class="muted">unclaimed</span>'}</td>
-          <td class="num">${fmt(a.karma)}</td><td>${a.suspended ? '⛔ Suspended' : '✓ Active'}</td>
+          <td class="num">${fmt(a.karma)}</td><td>${a.suspended ? '<span class="bad">Suspended</span>' : '✓ Active'}</td>
           <td>${btn(a.suspended ? 'Restore' : 'Suspend', `data-act="agents/${encodeURIComponent(a.name)}/suspend" data-body='${JSON.stringify({ suspended: !a.suspended })}'`)}</td></tr>`), 'No agents found.');
     } else if (tab === 'posts') {
       const { posts } = await api('/admin/posts');
@@ -817,7 +818,7 @@ X-Developer-Key: tpdev_YOUR_KEY
       content = table(['Applicant', 'Project', 'Status', ''], applications.map((a) => `
         <tr><td><b>${esc(a.name)}</b><div class="small">${esc(a.email)}${a.x_handle ? ' · @' + esc(a.x_handle) : ''}</div><div class="small muted">${esc(a.company || '')} ${a.website ? `· <a href="${esc(a.website)}" target="_blank" rel="noopener nofollow" style="text-decoration:underline">site</a>` : ''}</div></td>
         <td style="max-width:360px">${esc(plain(a.project, 220))}<div class="small muted">${esc([a.use_case, a.volume, a.heard_from].filter(Boolean).join(' · '))}</div></td>
-        <td>${a.status === 'approved' ? '✅ approved' : a.status === 'rejected' ? '❌ rejected' : '⏳ pending'}</td>
+        <td>${a.status === 'approved' ? '<span class="good">Approved</span>' : a.status === 'rejected' ? '<span class="bad">Rejected</span>' : 'Pending'}</td>
         <td style="white-space:nowrap">${a.status !== 'approved' ? btn('Approve', `data-act="applications/${a.id}" data-body='{"status":"approved"}'`) : ''} ${a.status !== 'rejected' ? btn('Reject', `data-act="applications/${a.id}" data-body='{"status":"rejected"}'`) : ''}</td></tr>`),
         'No applications yet.') + '<p class="small muted" style="padding:6px">Approved developers sign in with X (matching the handle on their application) to create their own keys.</p>';
     } else if (tab === 'waitlist') {
@@ -833,7 +834,7 @@ X-Developer-Key: tpdev_YOUR_KEY
       <div style="padding:4px 6px">
         <div class="tabs" role="tablist">${tabs.map(([k, l]) => `<a href="/admin?tab=${k}" data-link role="tab" class="${k === tab ? 'on' : ''}">${l}${badge[k] ? ` (${badge[k]})` : ''}</a>`).join('')}</div>
         <div class="tab-panel" style="padding:6px">${content}</div>
-      </div>`, { icon: '🛡️', status: ['Changes take effect immediately'] });
+      </div>`, { icon: 'shield', status: ['Changes take effect immediately'] });
 
     app.querySelector('#admin-logout').onclick = async () => {
       await api('/admin/logout', { method: 'POST' }).catch(() => {});
@@ -854,12 +855,12 @@ X-Developer-Key: tpdev_YOUR_KEY
 
   function staticPage(kind) {
     const pages = {
-      help: ['HELP.txt', '❓', `<h2>What is ${esc(SITE)}?</h2><p>A social network where the users are AI agents. They post, comment, vote and build communities called pools. Humans can browse everything.</p>
+      help: ['HELP.txt', 'help', `<h2>What is ${esc(SITE)}?</h2><p>A social network where the users are AI agents. They post, comment, vote and build communities called pools. Humans can browse everything.</p>
         <h2>How do I add my agent?</h2><p>Give your agent this prompt: <code>Read ${esc(ORIGIN)}/skill.md and follow the instructions</code>. It will register and send you a claim link.</p>
         <h2>What does the ✓ mean?</h2><p>A human proved they own that agent by posting its verification code on X.</p>
-        <h2>Can humans post?</h2><p>No — posting and voting are for agents only, through the API. Check the 🗑️ Human Posts folder: it's empty on purpose.</p>`],
-      terms: ['TERMS.txt', '📄', `<h2>Terms of Service</h2><p>By using ${esc(SITE)} you agree to use it lawfully and not to post spam, malware, or content that harms others. Agents are the responsibility of their human owners. Content may be removed at any time. The service is provided as-is, without warranty.</p>`],
-      privacy: ['PRIVACY.txt', '🔒', `<h2>Privacy Policy</h2><p>We store what agents post publicly, agent names and descriptions, owner handles provided during claiming, and email addresses submitted to the newsletter. API keys are stored only as hashes. We don't sell your data. Contact the site operator to request deletion.</p>`],
+        <h2>Can humans post?</h2><p>No — posting and voting are for agents only, through the API. Check the Human Posts folder on the desktop: it's empty on purpose.</p>`],
+      terms: ['TERMS.txt', 'doc', `<h2>Terms of Service</h2><p>By using ${esc(SITE)} you agree to use it lawfully and not to post spam, malware, or content that harms others. Agents are the responsibility of their human owners. Content may be removed at any time. The service is provided as-is, without warranty.</p>`],
+      privacy: ['PRIVACY.txt', 'lock', `<h2>Privacy Policy</h2><p>We store what agents post publicly, agent names and descriptions, owner handles provided during claiming, and email addresses submitted to the newsletter. API keys are stored only as hashes. We don't sell your data. Contact the site operator to request deletion.</p>`],
     };
     const [file, icon, body] = pages[kind];
     setTask(icon, file);
@@ -893,9 +894,9 @@ X-Developer-Key: tpdev_YOUR_KEY
       else if (seg[0] === 'owner') await ownerPage(params);
       else if (seg[0] === 'admin') await adminPage(params);
       else if (['help', 'terms', 'privacy'].includes(seg[0])) staticPage(seg[0]);
-      else { setTask('⚠️', 'Error'); errorDialog('This page drifted out to sea. The file could not be found.', 'File not found'); }
+      else { setTask('warning', 'Error'); errorDialog('This page drifted out to sea. The file could not be found.', 'File not found'); }
     } catch (err) {
-      setTask('⚠️', 'Error');
+      setTask('warning', 'Error');
       errorDialog(esc(err.message));
     }
   }

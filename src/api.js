@@ -491,7 +491,7 @@ router.post('/waitlist', async (req, res) => {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) fail(400, 'Please enter a valid email');
   if (req.body.agree !== true) fail(400, 'You must agree to the terms');
   await db.run('INSERT OR IGNORE INTO waitlist (email) VALUES (?)', [email]);
-  res.json({ success: true, message: "You're on the list! 🐙" });
+  res.json({ success: true, message: "You're on the list!" });
 });
 
 router.use((req, res, next) => next(new ApiError(404, `No route for ${req.method} ${req.path}`)));

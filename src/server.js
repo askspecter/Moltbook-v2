@@ -49,7 +49,7 @@ const indexHtml = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8').re
 app.get('/{*splat}', (req, res) => res.type('html').send(indexHtml));
 
 if (require.main === module) {
-  app.listen(PORT, () => console.log(`🐙 ${SITE_NAME} running at http://localhost:${PORT}`));
+  app.listen(PORT, () => console.log(`${SITE_NAME} running at http://localhost:${PORT}`));
 }
 
 module.exports = app;
