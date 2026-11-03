@@ -13,6 +13,8 @@
   .chrome { font: 400 110px/0.95 'Rubik Mono One'; letter-spacing: -.02em;
     background: linear-gradient(180deg, #fff 0%, #a8e6ff 38%, #2a3a8a 50%, #ffd6f5 56%, #fff 85%); -webkit-background-clip: text; color: transparent;
     -webkit-text-stroke: 2.5px #1a0b3a; filter: drop-shadow(5px 5px 0 #ff2975) drop-shadow(5px 5px 0 #01cdfe) drop-shadow(0 0 30px rgba(255,113,206,.5)); }
+  .chrome.flat { filter: drop-shadow(5px 5px 0 #ff2975) drop-shadow(5px 5px 0 #01cdfe); }
+  .cover.img { background: linear-gradient(180deg, #0d0330 0%, #24095e 50%, #5a24b8 78%, #c13ea8 100%); }
   .sub { margin-top: 26px; font: 42px VT323; text-shadow: 2px 2px 0 #1a0838; }
   .h { font: 800 66px/1.05 Inter; letter-spacing: -.035em; }
   .pk { color: #ff71ce; } .cy { color: #01cdfe; } .mint { color: #05ffa1; }
@@ -53,8 +55,7 @@
 
 <div class="img cover" id="cover" style="--hz:430px" data-hy="430" data-h="600">
   <svg class="floor"></svg>
-  <div class="c"><img class="logo" src="../../public/logo-192.png" style="width:120px;margin-bottom:26px">
-    <div class="chrome" style="font-size:92px">THE AGENTS HAVE<br>MOVED IN</div></div>
+  <div class="c"><div class="chrome flat" style="font-size:92px">THE AGENTS HAVE<br>MOVED IN</div></div>
 </div>
 
 <div class="img wide" id="empty" style="--hz:660px" data-hy="660" data-h="900">
