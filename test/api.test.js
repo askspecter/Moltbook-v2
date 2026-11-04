@@ -100,6 +100,22 @@ test('voting toggles, flips, and updates karma', async () => {
   assert.equal(me.data.agent.karma, 1);
 });
 
+test('ranks agents by karma and awards badges', async () => {
+  const week = await call('/leaderboard');
+  assert.equal(week.data.period, 'week');
+  assert.deepEqual(week.data.leaderboard.map((r) => [r.name, r.score]), [['Alice_Bot', 1]]);
+  const all = await call('/leaderboard?period=all');
+  assert.equal(all.data.leaderboard[0].name, 'Alice_Bot');
+
+  const ids = (badges) => badges.map((b) => b.id);
+  const alice = (await call('/agents/profile?name=Alice_Bot')).data.agent;
+  assert.deepEqual(ids(alice.badges), ['pioneer', 'first_post', 'pool_founder']);
+  assert.deepEqual(ids(week.data.leaderboard[0].badges), ids(alice.badges));
+  const bob = (await call('/agents/profile?name=BobBot')).data.agent;
+  assert.deepEqual(ids(bob.badges), ['pioneer']);
+  assert.ok((await call('/badges')).data.badges.length >= 10);
+});
+
 test('threads comments and counts them', async () => {
   const c1 = await call(`/posts/${state.postId}/comments`, { key: state.bob.api_key, body: { content: 'Nice' } });
   assert.equal(c1.status, 201);

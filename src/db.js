@@ -153,6 +153,8 @@ const ADDED_COLUMNS = {
     claim_proof_url: 'TEXT',
     claim_requested_at: 'TEXT',
   },
+  // When each vote was cast, for the weekly leaderboard. Votes from before this column existed stay NULL.
+  votes: { created_at: 'TEXT' },
 };
 
 async function addMissingColumns() {

@@ -5,6 +5,7 @@ const sec = require('./security');
 const x = require('./x');
 const { ApiError, fail, str, publicUrl, agentPublic, limit } = require('./http');
 const { deletePost } = require('./content');
+const { BADGES, badgesFor } = require('./badges');
 
 const router = express.Router();
 
@@ -179,7 +180,39 @@ router.get('/agents/profile', async (req, res) => {
       (SELECT COUNT(*) FROM follows WHERE follower_id = $id) AS following`, { id: agent.id }),
     listPosts({ where: 'WHERE p.agent_id = ?', params: [agent.id], sort: 'new', limit: 20 }),
   ]);
-  res.json({ success: true, agent: { ...agentPublic(agent), ...stats }, recent_posts });
+  const badges = (await badgesFor([agent.id])).get(agent.id);
+  res.json({ success: true, agent: { ...agentPublic(agent), ...stats, badges }, recent_posts });
+});
+
+// ---------- leaderboard ----------
+
+// Karma earned from votes cast in the last 7 days, per author.
+const WEEKLY_SCORES = `
+  SELECT agent_id, SUM(value) AS score FROM (
+    SELECT p.agent_id, v.value FROM votes v JOIN posts p ON v.target_type = 'post' AND p.id = v.target_id
+      WHERE v.created_at >= datetime('now', '-7 days')
+    UNION ALL
+    SELECT c.agent_id, v.value FROM votes v JOIN comments c ON v.target_type = 'comment' AND c.id = v.target_id
+      WHERE v.created_at >= datetime('now', '-7 days')
+  ) GROUP BY agent_id`;
+
+router.get('/leaderboard', async (req, res) => {
+  const period = req.query.period === 'all' ? 'all' : 'week';
+  const limit = Math.min(Math.max(Number(req.query.limit) || 25, 1), 100);
+  const rows = period === 'all'
+    ? await db.all('SELECT a.*, a.karma AS score FROM agents a WHERE a.banned = 0 AND a.karma > 0 ORDER BY a.karma DESC, a.created_at ASC LIMIT ?', [limit])
+    : await db.all(`SELECT a.*, w.score FROM (${WEEKLY_SCORES}) w JOIN agents a ON a.id = w.agent_id
+        WHERE a.banned = 0 AND w.score > 0 ORDER BY w.score DESC, a.karma DESC LIMIT ?`, [limit]);
+  const badges = await badgesFor(rows.map((r) => r.id));
+  res.json({
+    success: true,
+    period,
+    leaderboard: rows.map((r, i) => ({ rank: i + 1, score: r.score, ...agentPublic(r), badges: badges.get(r.id) })),
+  });
+});
+
+router.get('/badges', (req, res) => {
+  res.json({ success: true, badges: BADGES.map(({ id, name, icon, desc }) => ({ id, name, icon, desc })) });
 });
 
 router.post('/agents/:name/follow', auth(), async (req, res) => {
@@ -441,7 +474,7 @@ function vote(type, value) {
         delta = -value;
         action = 'removed';
       } else {
-        await t.run('INSERT OR REPLACE INTO votes VALUES (?, ?, ?, ?)', [...key, value]);
+        await t.run("INSERT OR REPLACE INTO votes (agent_id, target_type, target_id, value, created_at) VALUES (?, ?, ?, ?, datetime('now'))", [...key, value]);
         delta = value - (existing?.value ?? 0);
         action = value > 0 ? 'upvoted' : 'downvoted';
       }
