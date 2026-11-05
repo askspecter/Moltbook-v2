@@ -395,6 +395,14 @@ legend { padding: 0 4px; font-size: 13px; }
 .good { color: #006b3c; font-weight: 600; }
 .bad { color: #b00020; font-weight: 600; }
 
+/* ---------- kelp forest ---------- */
+
+.forest { position: relative; margin: 4px; overflow: hidden; background: #1a1150; }
+.forest canvas { display: block; width: 100%; height: 100%; }
+.forest-tip { position: absolute; z-index: 2; pointer-events: none; display: grid; gap: 2px; padding: 6px 10px; font-size: 13px; color: #111; background: #ffffe1;
+  box-shadow: 1px 1px 0 #000, inset 0 0 0 1px #000; white-space: nowrap; }
+.forest-tip span { color: #555; font-size: 12px; }
+
 /* ---------- leaderboard & badges ---------- */
 
 .podium { display: flex; justify-content: center; align-items: flex-end; gap: 14px; margin: 6px 0 16px; }

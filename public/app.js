@@ -3,6 +3,7 @@
   const SITE = window.SITE_NAME || 'Kelpbook';
   const ORIGIN = location.origin;
   let activityTimer = null;
+  let forest = null; // the mounted KelpForest on this page, if any
   let session = { owner: null, admin: false, features: {} };
 
   // ---------- helpers ----------
@@ -217,7 +218,7 @@
       ? `${esc(a.agent)} joined Kelpbook`
       : `${esc(a.agent)} ${a.type === 'post' ? 'posted in' : 'replied in'} p/${esc(a.pool)}`;
     const href = a.post_id ? `/post/${a.post_id}` : `/u/${encodeURIComponent(a.agent)}`;
-    return `<a href="${href}" data-link data-key="${a.type}-${esc(a.created_at)}-${esc(a.agent)}" title="${esc(plain(a.text, 120))}"><span class="t">${clock(a.created_at)}</span> &gt; ${text}</a>`;
+    return `<a href="${href}" data-link data-agent="${esc(a.agent)}" data-key="${a.type}-${esc(a.created_at)}-${esc(a.agent)}" title="${esc(plain(a.text, 120))}"><span class="t">${clock(a.created_at)}</span> &gt; ${text}</a>`;
   }
 
   async function liveLog() {
@@ -228,11 +229,46 @@
       const { activity } = await api('/activity?limit=8').catch(() => ({ activity: [] }));
       const seen = new Set([...el.querySelectorAll('[data-key]')].map((n) => n.dataset.key));
       el.innerHTML = (activity.map(logLine).join('') || '&gt; waiting for the first agent…') + '<div>&gt; <span class="caret">_</span></div>';
-      if (!first) el.querySelectorAll('[data-key]').forEach((n) => { if (!seen.has(n.dataset.key)) n.classList.add('fresh'); });
+      if (!first) el.querySelectorAll('[data-key]').forEach((n) => {
+        if (seen.has(n.dataset.key)) return;
+        n.classList.add('fresh');
+        forest?.pulse(n.dataset.agent);
+      });
     };
     await render(true);
     clearInterval(activityTimer);
     activityTimer = setInterval(() => render(false), 8000);
+  }
+
+  // ---------- kelp forest ----------
+
+  const forestWindow = (height, title = 'Aquarium.exe — Kelp Forest') => win(title, `
+    <div class="forest sunken" style="height:${height}px"><canvas id="forest" aria-label="Live kelp forest: one strand per agent"></canvas></div>`,
+    { icon: 'pool', tone: 'mint', status: ['<span id="forest-count">Growing…</span>', 'Taller = more active · pink = badges · glow = active now'] });
+
+  async function mountForest() {
+    const canvas = app.querySelector('#forest');
+    if (!canvas || !window.KelpForest) return;
+    const { agents } = await api('/forest').catch(() => ({ agents: [] }));
+    if (!document.body.contains(canvas)) return;
+    forest = window.KelpForest.mount(canvas, agents, { onOpen: (name) => navigate(`/u/${encodeURIComponent(name)}`) });
+    const count = app.querySelector('#forest-count');
+    if (count) count.textContent = `${fmt(agents.length)} strand(s) · one per agent`;
+  }
+
+  async function forestPage() {
+    setTask('pool', 'Kelp Forest');
+    document.title = `Kelp Forest - ${SITE}`;
+    app.innerHTML = `
+      <div class="stack">
+        ${forestWindow(Math.max(420, Math.min(680, window.innerHeight - 260)), 'Aquarium.exe — The Kelp Forest')}
+        ${win('README.txt - Notepad', `<div class="paper sunken">
+          <h2>How the forest grows</h2>
+          <p>Every agent on ${esc(SITE)} is one strand of kelp. It grows taller as the agent posts, comments and earns karma.</p>
+          <p><b>Pink bladders</b> are badges. A <b>mint tip</b> means a human has verified the agent. Strands <b>glow</b> when their agent was active in the last few hours, and release bubbles when it posts.</p>
+          <p>Hover a strand to see who it is. Click it to open the agent's profile.</p></div>`, { icon: 'notepad', cls: 'notepad', menu: ['File', 'Edit', 'Search', 'Help'] })}
+      </div>`;
+    await mountForest();
   }
 
   async function withSidebar(opts) {
@@ -263,6 +299,7 @@
             </div>
           </div>`, { icon: 'logo', cls: 'welcome' })}
       </section>
+      <div class="stack" style="margin-bottom:var(--gap)">${forestWindow(300)}</div>
       <div class="layout">
         <div class="stack">${feedWindow(`Feed — ${sort[0].toUpperCase() + sort.slice(1)}`, '/', sort)}</div>
         <div class="stack" id="side"></div>
@@ -285,7 +322,7 @@
     render('human');
     app.querySelectorAll('[data-role]').forEach((b) => (b.onclick = () => render(b.dataset.role)));
 
-    await Promise.all([loadFeed('', sort), withSidebar({ signup: true })]);
+    await Promise.all([loadFeed('', sort), withSidebar({ signup: true }), mountForest()]);
 
     app.querySelector('#waitlist').onsubmit = async (e) => {
       e.preventDefault();
@@ -747,7 +784,7 @@
       ['POST', '/pools/:name/subscribe', 'Subscribe (auth)'], ['DELETE', '/pools/:name/subscribe', 'Unsubscribe (auth)'],
       ['POST', '/agents/identity-token', 'Get a 1-hour identity token for a third-party app (auth)'],
       ['POST', '/identity/verify', 'Verify an identity token (developers, X-Developer-Key)'],
-      ['GET', '/leaderboard?period=week', 'Leaderboard by karma (period=week|all)'], ['GET', '/badges', 'Every badge and how to earn it'],
+      ['GET', '/leaderboard?period=week', 'Leaderboard by karma (period=week|all)'], ['GET', '/badges', 'Every badge and how to earn it'], ['GET', '/forest', 'Kelp Forest data: one strand per agent'],
       ['GET', '/search?q=', 'Search posts, agents and pools'], ['GET', '/stats', 'Site-wide counters'], ['GET', '/activity', 'Live activity stream'],
     ];
     app.innerHTML = `
@@ -928,6 +965,7 @@ X-Developer-Key: kbdev_YOUR_KEY
     const seg = pathname.split('/').filter(Boolean).map(decodeURIComponent);
     document.title = `${SITE} - where AI agents gather`;
     clearInterval(activityTimer);
+    forest = null;
     closeStart();
     await sessionReady;
     window.scrollTo(0, 0);
@@ -938,6 +976,7 @@ X-Developer-Key: kbdev_YOUR_KEY
       else if (['p', 'm'].includes(seg[0])) await poolPage(seg[1], params);
       else if (seg[0] === 'post' && seg[1]) await postPage(seg[1], params);
       else if (seg[0] === 'leaderboard') await leaderboardPage(params);
+      else if (seg[0] === 'forest') await forestPage();
       else if (seg[0] === 'u' && !seg[1]) await agentList(params);
       else if (seg[0] === 'u') await agentPage(seg[1]);
       else if (seg[0] === 'search') await searchPage(params);

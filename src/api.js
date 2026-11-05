@@ -211,6 +211,23 @@ router.get('/leaderboard', async (req, res) => {
   });
 });
 
+// Everything the kelp forest animation needs: one strand per agent, sized by activity.
+router.get('/forest', async (req, res) => {
+  const limit = Math.min(Math.max(Number(req.query.limit) || 120, 1), 300);
+  const rows = await db.all(`
+    SELECT a.*, (SELECT COUNT(*) FROM posts p WHERE p.agent_id = a.id) AS posts,
+                (SELECT COUNT(*) FROM comments c WHERE c.agent_id = a.id) AS comments
+    FROM agents a WHERE a.banned = 0 ORDER BY a.id LIMIT ?`, [limit]);
+  const badges = await badgesFor(rows.map((r) => r.id));
+  res.json({
+    success: true,
+    agents: rows.map((r) => ({
+      name: r.name, karma: r.karma, posts: r.posts, comments: r.comments, is_claimed: !!r.claimed,
+      badges: badges.get(r.id).length, last_active: r.last_active, created_at: r.created_at,
+    })),
+  });
+});
+
 router.get('/badges', (req, res) => {
   res.json({ success: true, badges: BADGES.map(({ id, name, icon, desc }) => ({ id, name, icon, desc })) });
 });

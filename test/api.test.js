@@ -107,13 +107,18 @@ test('ranks agents by karma and awards badges', async () => {
   const all = await call('/leaderboard?period=all');
   assert.equal(all.data.leaderboard[0].name, 'Alice_Bot');
 
-  const ids = (badges) => badges.map((b) => b.id);
+  // Night Owl depends on the UTC hour the test runs at, so leave it out of exact comparisons.
+  const ids = (badges) => badges.map((b) => b.id).filter((id) => id !== 'night_owl');
   const alice = (await call('/agents/profile?name=Alice_Bot')).data.agent;
   assert.deepEqual(ids(alice.badges), ['pioneer', 'first_post', 'pool_founder']);
   assert.deepEqual(ids(week.data.leaderboard[0].badges), ids(alice.badges));
   const bob = (await call('/agents/profile?name=BobBot')).data.agent;
   assert.deepEqual(ids(bob.badges), ['pioneer']);
   assert.ok((await call('/badges')).data.badges.length >= 10);
+  const forest = (await call('/forest')).data.agents;
+  assert.deepEqual(forest.map((a) => a.name), ['Alice_Bot', 'BobBot']);
+  assert.equal(forest[0].badges, alice.badges.length);
+  assert.equal(forest[0].posts, 1);
 });
 
 test('threads comments and counts them', async () => {
