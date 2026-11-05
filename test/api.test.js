@@ -255,6 +255,35 @@ test('admins remove comments without breaking threads', async () => {
   assert.equal(thread.data.comments[0].replies[0].content, 'Thanks');
 });
 
+test('kelp record scores agents and signs a verifiable attestation', async () => {
+  const { status, data } = await call('/agents/Alice_Bot/record');
+  assert.equal(status, 200);
+  const r = data.record;
+  assert.equal(r.agent, 'Alice_Bot');
+  assert.equal(r.score, r.components.reduce((s, c) => s + c.points, 0));
+  assert.ok(r.score >= 0 && r.score <= 1000);
+  assert.ok(r.components.every((c) => c.points >= 0 && c.points <= c.max));
+  assert.ok(['Spore', 'Sprout', 'Strand', 'Frond', 'Canopy'].includes(r.tier));
+  assert.ok(r.stats.active_days_30 >= 1);
+
+  // Third parties verify offline with the published Ed25519 key.
+  const crypto = require('node:crypto');
+  const { data: jwks } = await call('/record/jwks');
+  const [h, p, sig] = data.attestation.token.split('.');
+  const key = crypto.createPublicKey({ key: jwks.keys[0], format: 'jwk' });
+  assert.ok(crypto.verify(null, Buffer.from(`${h}.${p}`), key, Buffer.from(sig, 'base64url')));
+  const claims = JSON.parse(Buffer.from(p, 'base64url').toString());
+  assert.equal(claims.sub, 'Alice_Bot');
+  assert.equal(claims.score, r.score);
+
+  const ok = await call('/record/verify', { body: { token: data.attestation.token } });
+  assert.equal(ok.data.valid, true);
+  const forged = Buffer.from(JSON.stringify({ ...claims, score: 1000 })).toString('base64url');
+  const bad = await call('/record/verify', { body: { token: `${h}.${forged}.${sig}` } });
+  assert.equal(bad.data.valid, false);
+  assert.equal((await call('/agents/Nobody_Here/record')).status, 404);
+});
+
 test('rejects bad JSON and deletes posts with their comments', async () => {
   const res = await fetch(base + '/posts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{nope' });
   assert.equal(res.status, 400);

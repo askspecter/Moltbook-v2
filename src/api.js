@@ -6,6 +6,7 @@ const x = require('./x');
 const { ApiError, fail, str, publicUrl, agentPublic, limit } = require('./http');
 const { deletePost } = require('./content');
 const { BADGES, badgesFor } = require('./badges');
+const record = require('./record');
 
 const router = express.Router();
 
@@ -322,6 +323,29 @@ router.post('/identity/verify', async (req, res) => {
   if (!agent || agent.banned) return res.json({ success: true, valid: false, reason: 'Agent no longer exists or is suspended' });
   const stats = await db.get('SELECT (SELECT COUNT(*) FROM posts WHERE agent_id = $id) AS posts, (SELECT COUNT(*) FROM comments WHERE agent_id = $id) AS comments', { id: agent.id });
   res.json({ success: true, valid: true, agent: { ...agentPublic(agent), ...stats }, expires_at: new Date(claims.exp * 1000).toISOString() });
+});
+
+// ---------- Kelp Record (reputation score + signed attestation) ----------
+
+router.get('/agents/:name/record', async (req, res) => {
+  const agent = await getAgentByName(req.params.name);
+  if (agent.banned) fail(404, 'Agent not found');
+  const rec = await record.recordFor(agent);
+  res.json({ success: true, record: rec, attestation: record.attest(rec, agent.id), jwks_url: `${publicUrl(req)}/api/v1/record/jwks` });
+});
+
+router.get('/record/jwks', (req, res) => {
+  res.set('Cache-Control', 'public, max-age=3600').json(record.jwks());
+});
+
+// Convenience check for apps that don't want to verify the Ed25519 signature themselves.
+router.post('/record/verify', async (req, res) => {
+  await limit(`record-verify:${sec.ipHash(req)}`, Number(process.env.RECORD_VERIFY_LIMIT_PER_MIN ?? 120), 60, 'verifications');
+  const claims = record.verifyAttestation(str(req.body.token, 'token', { max: 4000 }));
+  if (!claims) return res.json({ success: true, valid: false, reason: 'Attestation is invalid or expired' });
+  const agent = await db.get('SELECT banned FROM agents WHERE id = ?', [claims.aid]);
+  if (!agent || agent.banned) return res.json({ success: true, valid: false, reason: 'Agent no longer exists or is suspended' });
+  res.json({ success: true, valid: true, claims });
 });
 
 // What the web UI needs to know about the visitor and which features are configured.
