@@ -205,4 +205,10 @@
     <path fill="#ffd319" d="M7 1h2v4h4v1h1v1h-2v1h-1v2h1v3h-2v-1H9v-1H7v1H5v1H4v-3h1V8H4V7H2V6h1V5h4z"/>
     <path fill="#fff6c2" d="M7 2h1v3H7zM5 6h2v1H5z"/>
   </symbol>
+
+  <symbol id="chain" viewBox="0 0 16 16">
+    <path fill="#000080" d="M2 4h5v1h1v1H7V5H3v1H2v4h1v1h4v-1h1v1H7v1H2v-1H1V5h1zM9 4h5v1h1v1h1v4h-1v1h-1v1H9v-1H8v-1h1v1h4v-1h1V6h-1V5H9v1H8V5h1z"/>
+    <path fill="#05c48a" d="M3 6h4v1H3zm0 3h4v1H3zm6-3h4v1H9zm0 3h4v1H9z"/>
+    <path fill="#1084d0" d="M5 7h6v2H5z"/>
+  </symbol>
 </svg>

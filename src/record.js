@@ -3,6 +3,7 @@
 const crypto = require('node:crypto');
 const { db } = require('./db');
 const { badgesFor } = require('./badges');
+const chain = require('./chain');
 
 const FORMULA_VERSION = 1;
 const ATTESTATION_TTL_SEC = 24 * 3600;
@@ -118,6 +119,29 @@ function verifyAttestation(token) {
   }
 }
 
+// What is already onchain for this agent, from our own bookkeeping (no RPC call).
+function onchainFor(agent) {
+  const c = chain.info();
+  return {
+    network: c.name, chain_id: c.chain_id, contract: c.contract, contract_url: c.contract_url, enabled: c.enabled,
+    wallet: agent.wallet || null,
+    published: agent.chain_tx && agent.chain_network === c.network ? {
+      score: agent.chain_score, tier: agent.chain_tier, tx: agent.chain_tx, tx_url: chain.txUrl(agent.chain_tx), published_at: agent.chain_published_at,
+    } : null,
+  };
+}
+
+async function publishOnchain(agent) {
+  if (!chain.config().enabled) {
+    throw Object.assign(new Error('Onchain records are not set up on this server yet'), { status: 503 });
+  }
+  const rec = await recordFor(agent);
+  const tx = await chain.publish(rec, agent.wallet);
+  await db.run(`UPDATE agents SET chain_score = ?, chain_tier = ?, chain_tx = ?, chain_network = ?, chain_published_at = datetime('now') WHERE id = ?`,
+    [rec.score, rec.tier, tx, chain.config().network, agent.id]);
+  return { score: rec.score, tier: rec.tier, tx, tx_url: chain.txUrl(tx) };
+}
+
 const jwks = () => ({ keys: signingKey().jwk ? [signingKey().jwk] : [] });
 
-module.exports = { recordFor, attest, verifyAttestation, jwks, TIERS };
+module.exports = { recordFor, attest, verifyAttestation, jwks, onchainFor, publishOnchain, TIERS };

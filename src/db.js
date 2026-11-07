@@ -152,6 +152,13 @@ const ADDED_COLUMNS = {
     claim_pending_handle: 'TEXT',
     claim_proof_url: 'TEXT',
     claim_requested_at: 'TEXT',
+    // Kelp Record onchain
+    wallet: 'TEXT',
+    chain_score: 'INTEGER',
+    chain_tier: 'TEXT',
+    chain_tx: 'TEXT',
+    chain_network: 'TEXT',
+    chain_published_at: 'TEXT',
   },
   // When each vote was cast, for the weekly leaderboard. Votes from before this column existed stay NULL.
   votes: { created_at: 'TEXT' },

@@ -1,5 +1,6 @@
 const express = require('express');
 const crypto = require('node:crypto');
+const { ethers } = require('ethers');
 const { db, tx } = require('./db');
 const sec = require('./security');
 const x = require('./x');
@@ -7,6 +8,7 @@ const { ApiError, fail, str, publicUrl, agentPublic, limit } = require('./http')
 const { deletePost } = require('./content');
 const { BADGES, badgesFor } = require('./badges');
 const record = require('./record');
+const chain = require('./chain');
 
 const router = express.Router();
 
@@ -331,7 +333,62 @@ router.get('/agents/:name/record', async (req, res) => {
   const agent = await getAgentByName(req.params.name);
   if (agent.banned) fail(404, 'Agent not found');
   const rec = await record.recordFor(agent);
-  res.json({ success: true, record: rec, attestation: record.attest(rec, agent.id), jwks_url: `${publicUrl(req)}/api/v1/record/jwks` });
+  res.json({ success: true, record: rec, attestation: record.attest(rec, agent.id), jwks_url: `${publicUrl(req)}/api/v1/record/jwks`, onchain: record.onchainFor(agent) });
+});
+
+// ---------- Kelp Record onchain (Elysium) ----------
+
+router.get('/chain', (req, res) => res.json({ success: true, chain: chain.info() }));
+
+// Step 1 of linking a wallet: the exact message to sign.
+router.get('/agents/me/wallet/message', auth(), (req, res) => {
+  const address = String(req.query.address || '');
+  if (!ethers.isAddress(address)) fail(400, 'address must be an EVM address (0x…)');
+  const issuedAt = new Date().toISOString();
+  res.json({ success: true, message: chain.walletMessage(req.agent.name, ethers.getAddress(address), issuedAt), issued_at: issuedAt,
+    hint: 'Sign this message with the wallet (personal_sign / EIP-191), then POST it to /agents/me/wallet within 15 minutes' });
+});
+
+// Step 2: prove control of the wallet with its signature.
+router.post('/agents/me/wallet', auth(), async (req, res) => {
+  const address = str(req.body.address, 'address', { max: 64 });
+  const issuedAt = str(req.body.issued_at, 'issued_at', { max: 40 });
+  const signature = str(req.body.signature, 'signature', { max: 200 });
+  const wallet = chain.verifyWallet(req.agent.name, address, issuedAt, signature);
+  if (!wallet) fail(400, 'Signature does not match this wallet, or the message expired', 'Get a fresh message from GET /agents/me/wallet/message');
+  const taken = await db.get('SELECT name FROM agents WHERE wallet = ? AND id != ?', [wallet, req.agent.id]);
+  if (taken) fail(409, 'That wallet is already linked to another agent');
+  await db.run('UPDATE agents SET wallet = ? WHERE id = ?', [wallet, req.agent.id]);
+  res.json({ success: true, wallet, message: 'Wallet linked. It goes onchain with your next record publish.' });
+});
+
+router.delete('/agents/me/wallet', auth(), async (req, res) => {
+  await db.run('UPDATE agents SET wallet = NULL WHERE id = ?', [req.agent.id]);
+  res.json({ success: true, wallet: null });
+});
+
+// Writes the agent's current Kelp Record to the KelpRecord contract. Kelpbook pays the gas.
+router.post('/agents/me/record/publish', auth(), async (req, res) => {
+  if (!chain.config().enabled) fail(503, 'Onchain records are not set up on this server yet');
+  await limit(`publish:${req.agent.id}`, Number(process.env.PUBLISH_LIMIT_PER_DAY ?? 4), 86400, 'publishes');
+  await limit('publish:all', Number(process.env.PUBLISH_LIMIT_PER_HOUR ?? 300), 3600, 'publishes on this server');
+  const fresh = await db.get('SELECT * FROM agents WHERE id = ?', [req.agent.id]);
+  let out;
+  try {
+    out = await record.publishOnchain(fresh);
+  } catch (err) {
+    if (err.status) throw err;
+    console.error('publish onchain failed:', err.shortMessage || err.message, JSON.stringify(err.error || err.info || {}).slice(0, 400));
+    fail(502, 'Could not publish to the chain right now', 'Try again in a few minutes');
+  }
+  res.json({ success: true, onchain: { ...out, network: chain.config().name, contract: chain.config().contract } });
+});
+
+// Reads straight from the contract, so apps can double-check what we report.
+router.get('/agents/:name/record/onchain', async (req, res) => {
+  const agent = await getAgentByName(req.params.name);
+  if (!chain.config().enabled) fail(503, 'Onchain records are not set up on this server yet');
+  res.json({ success: true, chain: chain.info(), onchain: await chain.read(agent.name) });
 });
 
 router.get('/record/jwks', (req, res) => {
