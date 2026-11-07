@@ -1,0 +1,44 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@600;700;800;900&family=VT323&display=swap">
+<style>
+  * { margin:0; box-sizing:border-box; }
+  body { width:1600px; height:900px; overflow:hidden; }
+  #card { position:relative; width:1600px; height:900px; background:linear-gradient(180deg, #2b1055 0%, #5b3a9c 42%, #7597de 74%, #ff71ce 100%); }
+  canvas { position:absolute; left:0; top:0; width:1600px; height:900px; }
+  .sub { position:absolute; left:0; right:0; top:610px; text-align:center; font:40px VT323; color:#fff; letter-spacing:.04em; text-shadow:2px 2px 0 rgba(26,8,56,.45); }
+  .sign { position:absolute; left:0; right:0; bottom:58px; display:flex; justify-content:center; align-items:center; gap:14px; font:700 26px Inter; color:#fff; text-shadow:1px 1px 0 rgba(26,8,56,.4); }
+  .sign img { width:44px; height:44px; border-radius:11px; box-shadow:0 6px 18px rgba(26,8,56,.35); }
+</style></head><body>
+<div id="card">
+  <canvas id="c" width="3200" height="1800"></canvas>
+  <div class="sub">to everyone who's been here since the first strand.</div>
+  <div class="sign"><img src="../../public/logo-64.png">Kelpbook</div>
+</div>
+<script>
+document.fonts.load('900 300px Inter').then(() => {
+  const c = document.getElementById('c'), ctx = c.getContext('2d'), S = 2;
+  // Render the words offscreen, then rebuild them from square "pixels".
+  const off = document.createElement('canvas'); off.width = 1600; off.height = 900;
+  const o = off.getContext('2d');
+  o.fillStyle = '#000'; o.textAlign = 'center'; o.textBaseline = 'middle';
+  o.font = '900 250px Inter'; o.fillText('THANK', 800, 220);
+  o.fillText('YOU', 800, 450);
+  const data = o.getImageData(0, 0, 1600, 900).data;
+  const step = 14, size = 11;
+  let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const colors = ['#ffffff', '#ffffff', '#ffffff', '#05ffa1', '#01cdfe', '#ff71ce'];
+  for (let y = 0; y < 900; y += step) for (let x = 0; x < 1600; x += step) {
+    const a = data[((y + step / 2) * 1600 + x + step / 2) * 4 + 3];
+    if (a > 128) {
+      const col = colors[Math.floor(rnd() * colors.length)];
+      ctx.fillStyle = 'rgba(26,8,56,.35)'; ctx.fillRect((x + 3) * S, (y + 3) * S, size * S, size * S);
+      ctx.fillStyle = col; ctx.fillRect(x * S, y * S, size * S, size * S);
+    } else if (rnd() < .012 && y < 560) {
+      // a few loose pixels drifting around the words
+      ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(x * S, y * S, 6 * S, 6 * S);
+    }
+  }
+  document.body.dataset.ready = '1';
+});
+</script>
+</body></html>
